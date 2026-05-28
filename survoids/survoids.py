@@ -1,17 +1,18 @@
 # Author: me
-# Date: 15/02/2026
+# Date created: 15/02/2026
+# Date updated: 28/05/2026
 # Description: A game like asteroids and vampire survivors
 
 ## Improvements
 
-
-# Create a sprite class
+# powerups
+# more enemies
 
 
 ## Imports
 
 import pygame
-from pygame.locals import *
+from pygame.locals import *     # type: ignore
 import random as rand
 import sys
 import math
@@ -33,15 +34,14 @@ pygame.display.set_caption("Survoids")
 
 pygame.mouse.set_visible(False)
 
+run_once = True
+
 bullet_delay = 0
 BULLET_HOLDOFF = 50
 
 enemy_number = 0
 
-lives = 3
 score = 0
-
-immunity_FPS = 0
 
 wave = 0
 wave_cleared = 0
@@ -55,6 +55,16 @@ levels_gained = 0
 levels_used = 0
 
 
+## Events
+
+GAME_OVER = pygame.event.custom_type()
+
+PLAYER_HIT = pygame.event.custom_type()
+IMMUNE_OFF = pygame.event.custom_type()
+
+ENEMY_HIT = pygame.event.custom_type()
+
+
 ## Layers
 
 # 0 - Background
@@ -64,7 +74,8 @@ levels_used = 0
 # 4 - Thruster
 # 5 - Player
 # 6 - UI
-# 7 - Mouse
+# 7 - ScreenEffect
+# 8 - Mouse
 
 
 ## Functions
@@ -137,7 +148,7 @@ def spawn_waves():
         wave += 1
 
 
-def update_text():
+def update_text(lives: int):
     life_number = str(lives)
     score_number = str(score)
     lives_text.update(life_number)
@@ -153,11 +164,54 @@ def update_stats():
     experience += 4
 
 
-def check_game_over(lives):
+def update_run_once(boolean:bool):
+    global run_once         # this function is for avoiding global in main
+    run_once = boolean
+
+
+def check_game_over(lives: int):
     if lives <= 0:
         return True
     else:
         return False
+
+# note: the two functions below always cause a permission error if using a cloned repository, I believe a local repository would be fine
+def reset_game_results():
+    try:
+        with open("/game_results.txt", "w") as game_results:
+            game_results.write("This is the text file where game data is saved.\n\n")
+    except PermissionError:
+        with open("/game_results_new.txt", "w") as game_results:
+            game_results.write("This is the text file where game data is saved.\n\n")
+
+
+def store_game_info(score:int, level:int, wave:int):
+    time_elapsed:float = pygame.time.get_ticks() / 1000
+
+    try:
+        with open("/game_results.txt", "a") as game_results:
+            game_results.write(f"Score: {score}\n")
+            game_results.write(f"Wave: {wave}\n")
+            game_results.write(f"Level: {level}\n")
+            game_results.write(f"Time elapsed: {time_elapsed:.2f}\n")
+    except PermissionError:
+        with open("/game_results_new.txt", "a") as game_results:
+            game_results.write(f"Score: {score}\n")
+            game_results.write(f"Wave: {wave}\n")
+            game_results.write(f"Level: {level}\n")
+            game_results.write(f"Time elapsed: {time_elapsed:.2f}\n")
+
+
+def change_to_end_screen():
+    end_screen = ScreenEffect((0,0,10), 60)
+    all_sprites.add(end_screen)
+    screen_effect_sprites.add(end_screen)
+
+    game_over_text = Text("GAME OVER", "kenvector_future", 75)
+    game_over_text.rect.center = (300, 200)
+    all_sprites.add(game_over_text)
+    text_sprites.add(game_over_text)
+
 
 ## Classes 
 
@@ -173,7 +227,7 @@ class Background(pygame.sprite.Sprite):
 class Mouse(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self._layer = 7
+        self._layer = 8
         self.image = pygame.image.load('survoids/images/crosshair.png').convert_alpha()
         self.surf = pygame.Surface((30,33))
         self.rect = self.surf.get_rect()
@@ -185,12 +239,18 @@ class Mouse(pygame.sprite.Sprite):
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self):
-        super().__init__()
+    can_move:bool = True
+
+    def __init__(self, *groups):
+        super().__init__(*groups)
         self._layer = 5
         unscaled_image = pygame.image.load('survoids/images/player.png').convert_alpha()
+        unscaled_immune_image = pygame.image.load('survoids/images/player_immune.png').convert_alpha()
         self.image = pygame.transform.scale(unscaled_image, (45, 37))
-        self.original_image = pygame.transform.scale(unscaled_image, (45, 37))
+        self.normal_image = pygame.transform.scale(unscaled_image, (45, 37))
+        self.immune_image = pygame.transform.scale(unscaled_immune_image, (45, 37))
+        self.original_image = self.normal_image
+
         self.surf = pygame.Surface((45,37))
         self.rect = self.surf.get_rect(center = (WIDTH/2, HEIGHT/2))
         self.angle = 90
@@ -208,6 +268,9 @@ class Player(pygame.sprite.Sprite):
         self.ACCELERATION_SPEED = 0.2
         self.DECELERATION_SPEED = 0.1
 
+        self.lives = 3
+        self.immune = False
+
         self.BULLET_HOLDOFF = 20
         self.bullet_delay = 0
 
@@ -219,22 +282,30 @@ class Player(pygame.sprite.Sprite):
         y = self.rect.centery
         return (x,y)
 
+    def set_vulnerable(self) -> None:
+        self.immune = False
+    
+    def set_can_move(self, boolean:bool) -> None:
+        Player.can_move = boolean
+
     def update(self):
         keyboard = pygame.key.get_pressed()
 
-        # Accelerate
-        if keyboard[K_w]:
-            if self.acceleration_up < self.MAX_ACCELERATION_UP:
-                self.acceleration_up += self.ACCELERATION_SPEED
-        if keyboard[K_s]:
-            if self.acceleration_down < self.MAX_ACCELERATION_DOWN:
-                self.acceleration_down += self.ACCELERATION_SPEED
-        if keyboard[K_a]:
-            if self.acceleration_left < self.MAX_ACCELERATION_LEFT:
-                self.acceleration_left += self.ACCELERATION_SPEED
-        if keyboard[K_d]:
-            if self.acceleration_right < self.MAX_ACCELERATION_RIGHT:
-                self.acceleration_right += self.ACCELERATION_SPEED
+        if Player.can_move:
+
+            # Accelerate
+            if keyboard[K_w]:
+                if self.acceleration_up < self.MAX_ACCELERATION_UP:
+                    self.acceleration_up += self.ACCELERATION_SPEED
+            if keyboard[K_s]:
+                if self.acceleration_down < self.MAX_ACCELERATION_DOWN:
+                    self.acceleration_down += self.ACCELERATION_SPEED
+            if keyboard[K_a]:
+                if self.acceleration_left < self.MAX_ACCELERATION_LEFT:
+                    self.acceleration_left += self.ACCELERATION_SPEED
+            if keyboard[K_d]:
+                if self.acceleration_right < self.MAX_ACCELERATION_RIGHT:
+                    self.acceleration_right += self.ACCELERATION_SPEED
         
         # Decelerate
         if self.acceleration_up > 0.0:
@@ -247,10 +318,10 @@ class Player(pygame.sprite.Sprite):
             self.acceleration_right -= self.DECELERATION_SPEED
         
         # Calculate movement
-        acceleration_up_rounded = round(self.acceleration_up, 1)
-        acceleration_down_rounded = round(self.acceleration_down, 1)
-        acceleration_right_rounded = round(self.acceleration_right, 1)
-        acceleration_left_rounded = round(self.acceleration_left, 1)
+        acceleration_up_rounded = round(self.acceleration_up)
+        acceleration_down_rounded = round(self.acceleration_down)
+        acceleration_right_rounded = round(self.acceleration_right)
+        acceleration_left_rounded = round(self.acceleration_left)
         
         self.rect.y = self.rect.y - acceleration_up_rounded + acceleration_down_rounded
         self.rect.x = self.rect.x - acceleration_left_rounded + acceleration_right_rounded
@@ -271,6 +342,8 @@ class Player(pygame.sprite.Sprite):
         
 
 class Thruster(pygame.sprite.Sprite):
+    can_appear:bool = True
+
     def __init__(self):
         super().__init__()
         self._layer = 4
@@ -281,18 +354,23 @@ class Thruster(pygame.sprite.Sprite):
         self.OFFSET = 30
         self.angle = 90
     
+    def set_can_appear(self, boolean:bool) -> None:
+        Thruster.can_appear = boolean
+
     def update(self):
         keyboard = pygame.key.get_pressed()
 
-        # Visibility
-        if keyboard[K_w]:
-            screen.blit(self.image, self.rect)
-        if keyboard[K_s]:
-            screen.blit(self.image, self.rect)
-        if keyboard[K_a]:
-            screen.blit(self.image, self.rect)
-        if keyboard[K_d]:
-            screen.blit(self.image, self.rect)
+        if Thruster.can_appear:
+
+            # Visibility
+            if keyboard[K_w]:
+                screen.blit(self.image, self.rect)
+            if keyboard[K_s]:
+                screen.blit(self.image, self.rect)
+            if keyboard[K_a]:
+                screen.blit(self.image, self.rect)
+            if keyboard[K_d]:
+                screen.blit(self.image, self.rect)
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -313,8 +391,8 @@ class Bullet(pygame.sprite.Sprite):
     
     def update(self):
         angle = -math.radians(self.angle)
-        self.rect.centerx = self.rect.centerx + self.SPEED * math.sin(angle)
-        self.rect.centery = self.rect.centery - self.SPEED * math.cos(angle)
+        self.rect.centerx = self.rect.centerx + round(self.SPEED * math.sin(angle))
+        self.rect.centery = self.rect.centery - round(self.SPEED * math.cos(angle))
 
         if self.rect.centerx > 620 or self.rect.centerx < -20 or self.rect.centery > 620 or self.rect.centery < -20:
             self.kill()
@@ -335,8 +413,8 @@ class Enemy(pygame.sprite.Sprite):
         self.angle = rand.randint(0,360)
         self.radians = -math.radians(self.angle)
         self.spawn_radius = 500
-        self.rect.centerx = 300 + (self.spawn_radius + rand.randint(0,550)) * math.sin(self.radians)
-        self.rect.centery = 300 + (self.spawn_radius + rand.randint(0,550)) * math.cos(self.radians)
+        self.rect.centerx = 300 + round((self.spawn_radius + rand.randint(0,550)) * math.sin(self.radians))
+        self.rect.centery = 300 + round((self.spawn_radius + rand.randint(0,550)) * math.cos(self.radians))
 
     def get_pos(self) -> tuple:
         x = self.rect.centerx
@@ -346,8 +424,8 @@ class Enemy(pygame.sprite.Sprite):
     def update(self):
         # Move towards player
         self.radians = -math.radians(self.angle)
-        self.rect.centerx = self.rect.centerx + self.SPEED * math.sin(self.radians)
-        self.rect.centery = self.rect.centery - self.SPEED * math.cos(self.radians)
+        self.rect.centerx = self.rect.centerx + round(self.SPEED * math.sin(self.radians))
+        self.rect.centery = self.rect.centery - round(self.SPEED * math.cos(self.radians))
 
 
 class Hitmarker(pygame.sprite.Sprite):
@@ -390,6 +468,17 @@ class Text(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect()
 
 
+class ScreenEffect(pygame.sprite.Sprite):
+    def __init__(self, colour:tuple, alpha:int = 0):
+        super().__init__()
+        self._layer = 8
+
+        self.surf = pygame.Surface((WIDTH, HEIGHT))
+        self.surf.set_alpha(alpha)
+        self.surf.fill(colour)
+        self.rect = self.surf.get_rect(center = (WIDTH/2, HEIGHT/2))
+
+
 ## Objects
 
 all_sprites = pygame.sprite.LayeredUpdates()
@@ -398,6 +487,7 @@ enemy_sprites = pygame.sprite.Group()
 hitmarker_sprites = pygame.sprite.Group()
 ui_sprites = pygame.sprite.Group()
 text_sprites = pygame.sprite.Group()
+screen_effect_sprites = pygame.sprite.Group()
 
 background = Background()
 all_sprites.add(background)
@@ -419,7 +509,7 @@ player_life_icon = UI('life_ui', 33, 26, (21,20))
 all_sprites.add(player_life_icon)
 ui_sprites.add(player_life_icon)
 
-lives_text = Text(str(lives), 'kenvector_future', 24)
+lives_text = Text(str(player.lives), 'kenvector_future', 24)
 lives_text.rect.topleft = (68,8)
 all_sprites.add(lives_text)
 text_sprites.add(lives_text)
@@ -439,48 +529,85 @@ def main():
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.KEYDOWN:
+
+            if event.type == IMMUNE_OFF:
+                player.image = player.immune_image
+                player.original_image = player.normal_image
+
+                player.immune = False
+            
+            if event.type == ENEMY_HIT:
+                enemy_pos = event.enemy.get_pos()
+                hitmarker = Hitmarker(enemy_pos)
+                all_sprites.add(hitmarker)
+                hitmarker_sprites.add(hitmarker)
+                enemy_sprites.remove(event.enemy)
+                bullet_sprites.remove(event.bullet)
+                all_sprites.remove(event.enemy)
+                all_sprites.remove(event.bullet)
+                update_stats()
+
+            if event.type == PLAYER_HIT:
+                if not player.immune:
+                    player.lives -= 1
+                    
+                    player.image = player.immune_image
+                    player.original_image = player.immune_image
+
+                    player.immune = True
+                    pygame.time.set_timer(pygame.event.Event(IMMUNE_OFF), 2000)
+
+            if event.type == GAME_OVER:
+                player.set_can_move(False)
+                thruster.set_can_appear(False)
+                store_game_info(score, level, wave)
+                change_to_end_screen()
+
+            if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_1:
                     print(bullet_sprites)
-
+                if event.key == pygame.K_2:
+                    pygame.event.post(pygame.event.Event(PLAYER_HIT))
+                if event.key == pygame.K_3:
+                    reset_game_results()
+                if event.key == pygame.K_4:
+                    player.lives = 0
+        
         screen.fill((0,0,0))
 
-        point_object_to_object(player, mouse)
-        
-        adjust_thruster(thruster, player)
-        update_text()
-        fire_bullet(player)
+        update_text(player.lives)
 
-        spawn_waves()
+        if check_game_over(player.lives):
+            if run_once:
+                pygame.event.post(pygame.event.Event(GAME_OVER))
+                update_run_once(False)
+        else:
+            point_object_to_object(player, mouse)
         
+            adjust_thruster(thruster, player)
+
+            fire_bullet(player)
+            
+            spawn_waves()
+
+            if pygame.sprite.spritecollideany(player, enemy_sprites, pygame.sprite.collide_rect_ratio(0.8)):
+                pygame.event.post(pygame.event.Event(PLAYER_HIT))
+            
         for enemy in enemy_sprites:
             point_object_to_object(enemy, player)
 
             bullet_collision = pygame.sprite.spritecollideany(enemy, bullet_sprites)
 
             if bullet_collision:
-                enemy_pos = enemy.get_pos()
-                hitmarker = Hitmarker(enemy_pos)
-                all_sprites.add(hitmarker)
-                hitmarker_sprites.add(hitmarker)
-                enemy_sprites.remove(enemy)
-                bullet_sprites.remove(bullet_collision)
-                all_sprites.remove(enemy)
-                all_sprites.remove(bullet_collision)
-                update_stats()
-        
+                pygame.event.post(pygame.event.Event(ENEMY_HIT, {"enemy": enemy, "bullet": bullet_collision}))
+            
         for hitmarker in hitmarker_sprites:
             if hitmarker.time >= 30:
                 hitmarker_sprites.remove(hitmarker)
                 all_sprites.remove(hitmarker)
 
-        if check_game_over(lives):
-            pass
-
-
-
         for entity in all_sprites:
-            if entity in text_sprites:
+            if entity in text_sprites or entity in screen_effect_sprites:
                 screen.blit(entity.surf, entity.rect)
             elif entity != thruster:
                 screen.blit(entity.image, entity.rect)
