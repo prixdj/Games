@@ -175,31 +175,20 @@ def check_game_over(lives: int):
     else:
         return False
 
-# note: the two functions below always cause a permission error if using a cloned repository, I believe a local repository would be fine
+
 def reset_game_results():
-    try:
-        with open("/game_results.txt", "w") as game_results:
-            game_results.write("This is the text file where game data is saved.\n\n")
-    except PermissionError:
-        with open("/game_results_new.txt", "w") as game_results:
-            game_results.write("This is the text file where game data is saved.\n\n")
+    with open("survoids/game_results.txt", "w") as game_results:
+        game_results.write("This is the text file where game data is saved.\n\n")
 
 
 def store_game_info(score:int, level:int, wave:int):
     time_elapsed:float = pygame.time.get_ticks() / 1000
 
-    try:
-        with open("/game_results.txt", "a") as game_results:
-            game_results.write(f"Score: {score}\n")
-            game_results.write(f"Wave: {wave}\n")
-            game_results.write(f"Level: {level}\n")
-            game_results.write(f"Time elapsed: {time_elapsed:.2f}\n")
-    except PermissionError:
-        with open("/game_results_new.txt", "a") as game_results:
-            game_results.write(f"Score: {score}\n")
-            game_results.write(f"Wave: {wave}\n")
-            game_results.write(f"Level: {level}\n")
-            game_results.write(f"Time elapsed: {time_elapsed:.2f}\n")
+    with open("survoids/game_results.txt", "a") as game_results:
+        game_results.write(f"Score: {score}\n")
+        game_results.write(f"Wave: {wave}\n")
+        game_results.write(f"Level: {level}\n")
+        game_results.write(f"Time elapsed: {time_elapsed:.2f}\n")
 
 
 def change_to_end_screen():
