@@ -1,7 +1,7 @@
 # Author: prixdj
 # Date created: 15/02/2026
 # Date updated: 16/06/2026
-# Version: 0.1.3
+# Version: 0.2.0
 # Description: A game like asteroids and vampire survivors
 
 ## Improvements
@@ -9,14 +9,8 @@
 # Even more enemy types
 # Fix spawn radius
 # Enemy count
-# Better documentation
 # Controls screen
 # Previous runs thing
-
-
-## Known Bugs
-
-# player flickers when it dies due to some error with drawing it
 
 
 ## Imports
@@ -27,9 +21,6 @@ import random as rand
 import sys
 import math
 
-## Initialisation
-
-pygame.init()
 
 ## Constants and Variables
 
@@ -37,22 +28,7 @@ WIDTH = 600
 HEIGHT = 600
 FPS = 60
 
-clock = pygame.time.Clock()
-
-screen = pygame.display.set_mode((WIDTH,HEIGHT))
-pygame.display.set_caption("Survoids")
-
-pygame.mouse.set_visible(False)
-
-previous_game_state = "main_screen"
-game_state = "main_screen"
-
-score = 0
-
-wave_value = 10
-wave = 0
 WAVE_HOLDOFF = 120
-wave_delay = 0
 
 
 ## Events
@@ -67,6 +43,10 @@ IMMUNE_OFF = pygame.event.custom_type()
 
 ENEMY_HIT = pygame.event.custom_type()
 
+LEVEL_UP = pygame.event.custom_type()
+
+LEVEL_UP_COMPLETE = pygame.event.custom_type()
+
 
 ## Layers
 
@@ -76,334 +56,23 @@ ENEMY_HIT = pygame.event.custom_type()
 # 3 - Hitmarker
 # 4 - Thruster
 # 5 - Player
-# 6 - UI
+# 6 - UserInterface
 # 7 - Text
 # 8 - ScreenEffect
 # 9 - Mouse
 
 
-## Functions
-
-def calculate_angle_between_points(p1, p2) -> float:
-    x1, y1 = p1.rect.center
-    x2, y2 = p2.rect.center
-
-    dx = x2 - x1
-    dy = y2 - y1
-    
-    radians = math.atan2(dy, dx)
-    angle = -math.degrees(radians) - 90
-
-    return angle
-
-
-def point_object_to_object(obj1, obj2):
-    obj1.angle = calculate_angle_between_points(obj1, obj2)
-    obj1.image = pygame.transform.rotate(obj1.original_image, obj1.angle)
-    obj1.rect = obj1.image.get_rect(center = obj1.rect.center)
-
-
-def rotate_object(obj):
-    obj.image = pygame.transform.rotate(obj.original_image, obj.angle)
-    obj.rect = obj.image.get_rect(center = obj.rect.center)
-
-
-def adjust_thruster(thruster, player):
-    player_angle = player.get_angle()
-    angle = -math.radians(player_angle)
-
-    thruster.rect.centerx = player.rect.centerx - thruster.OFFSET * math.sin(angle)
-    thruster.rect.centery = player.rect.centery + thruster.OFFSET * math.cos(angle)
-
-    thruster.angle = player.angle
-    thruster.image = pygame.transform.rotate(thruster.original_image, thruster.angle)
-    thruster.rect = thruster.image.get_rect(center = thruster.rect.center)
-
-
-def fire_bullet(player):
-    keyboard = pygame.key.get_pressed()
-    if player.bullet_delay <= 0:
-        if keyboard[K_SPACE]:
-            bullet = Bullet(player.get_angle(), player.get_pos(), "bullet.png", (4, 24), 25)
-            all_sprites.add(bullet)
-            player_bullet_sprites.add(bullet)
-            player.bullet_delay = player.bullet_holdoff
-    else:
-        player.bullet_delay -= 1
-
-
-def spawn_enemies(enemy_wave:list):
-    for enemy in enemy_wave:
-        new_enemy = enemy()
-        all_sprites.add(new_enemy)
-        enemy_sprites.add(new_enemy)
-
-
-def end_wave():
-    if len(enemy_sprites) == 0:
-        return True
-    else:
-        return False
-
-
-def display_wave_clear():
-    wave_clear = Text(f"Wave {wave} Cleared", "kenvector_future_thin", 60)
-    wave_clear.rect.center = (300, 280)
-    all_sprites.add(wave_clear)
-    text_sprites.add(wave_clear)
-    wave_clear_sprites.add(wave_clear)
-
-
-def remove_wave_clear():
-    for text in wave_clear_sprites:
-        all_sprites.remove(text)
-        text_sprites.remove(text)
-    wave_clear_sprites.empty()
-
-
-def calc_wave() -> list:
-    enemy_wave = []
-    enemy_types = [EnemyA, EnemyB]
-    enemy_likelihood = []
-    current_wave_value = wave_value
-
-    for enemy_type in enemy_types:
-        for _ in range(enemy_type.likelihood):
-            enemy_likelihood.append(enemy_type)
-
-    while current_wave_value >= 5:  # smallest enemy value is 5
-        random_num = rand.randrange(0, len(enemy_likelihood))
-        enemy_type = enemy_likelihood[random_num]
-
-        if current_wave_value - enemy_type.value < 0:
-            continue
-
-        enemy_wave.append(enemy_type)
-        current_wave_value -= enemy_type.value
-    
-    return enemy_wave
-
-
-def change_enemy_likelihoods():
-    EnemyA.likelihood -= 1
-    EnemyB.likelihood += 1
-
-
-def spawn_waves():
-    global wave
-    global wave_value
-    global wave_delay
-    if end_wave() == True:
-        if not wave_clear_sprites and wave != 0:
-            display_wave_clear()
-            wave_delay = WAVE_HOLDOFF
-        
-        if wave_delay <= 0:
-            enemy_wave = calc_wave()
-            spawn_enemies(enemy_wave)
-
-            remove_wave_clear()
-            change_enemy_likelihoods()
-            wave_value += 10
-            wave += 1
-        else:
-            wave_delay -= 1
-
-
-def display_main_screen():
-    all_sprites.add(title_text)
-    text_sprites.add(title_text)
-    main_screen_sprites.add(title_text)
-
-    all_sprites.add(play_text_effect_1)
-    text_sprites.add(play_text_effect_1)
-    main_screen_sprites.add(play_text_effect_1)
-
-    all_sprites.add(play_text)
-    text_sprites.add(play_text)
-    main_screen_sprites.add(play_text)
-
-    all_sprites.add(play_text_effect_2)
-    text_sprites.add(play_text_effect_2)
-    main_screen_sprites.add(play_text_effect_2)
-
-    all_sprites.add(play_button)
-    ui_sprites.add(play_button)
-    main_screen_sprites.add(play_button)
-
-
-def remove_main_screen():
-    for sprite in main_screen_sprites:
-        all_sprites.remove(sprite)
-        if sprite in text_sprites:
-            text_sprites.remove(sprite)
-        elif sprite in ui_sprites:
-            ui_sprites.remove(sprite)
-    main_screen_sprites.empty()
-
-
-def display_background():
-    all_sprites.add(background)
-
-
-def display_mouse():
-    all_sprites.add(mouse)
-
-
-def display_pause_screen():
-    all_sprites.add(pause_screen)
-    screen_effect_sprites.add(pause_screen)
-    pause_screen_sprites.add(pause_screen)
-
-    all_sprites.add(pause_text)
-    text_sprites.add(pause_text)
-    pause_screen_sprites.add(pause_text)
-
-
-def remove_pause_screen():
-    for sprite in pause_screen_sprites:
-        all_sprites.remove(sprite)
-        if sprite in screen_effect_sprites:
-            screen_effect_sprites.remove(sprite)
-        elif sprite in text_sprites:
-            text_sprites.remove(sprite)
-        pause_screen_sprites.empty()
-
-
-def display_player():
-    all_sprites.add(player)
-    all_sprites.add(thruster)
-
-
-def display_ui():
-    all_sprites.add(x_ui)
-    ui_sprites.add(x_ui)
-
-    all_sprites.add(player_life_icon)
-    ui_sprites.add(player_life_icon)
-
-    all_sprites.add(lives_text)
-    text_sprites.add(lives_text)
-
-    all_sprites.add(score_text)
-    text_sprites.add(score_text)
-
-
-def update_text(lives:int):
-    life_number = str(lives)
-    score_number = str(score)
-    lives_text.update(life_number)
-    lives_text.rect.topleft = (68, 8)
-    score_text.update(score_number)
-    score_text.rect.topright = (596, 8)
-
-
-def update_stats(player):
-    global score
-    global experience
-    score += 20
-    player.experience += 4
-
-
-def update_game_state(new_state:str):
-    global previous_game_state
-    global game_state         # this function is for avoiding global in main
-    previous_game_state = game_state
-    game_state = new_state
-
-
-def check_mouse_click(item) -> bool:
-    if item.rect.collidepoint(pygame.mouse.get_pos()):
-        return True
-    return False
-
-
-def check_game_over(lives:int) -> bool:
-    if lives <= 0:
-        return True
-    else:
-        return False
-
-
-def display_powers():
-    if player.bullet_holdoff > 6:
-        lightning_power = Power((224, 483), "powerup1.png")
-    else:
-        lightning_power = Power((224, 483), "poweruplocked.png")
-    
-    all_sprites.add(lightning_power)
-    power_sprites.add(lightning_power)
-
-    lightning_text = Text("(1)", "kenvector_future_thin", 8)
-    lightning_text.rect.midtop = (224, 520)
-    all_sprites.add(lightning_text)
-    text_sprites.add(lightning_text)
-    powerup_text_sprites.add(lightning_text)
-    
-    if player.acceleration_speed < 0.8:
-        speed_power = Power((300, 483), "powerup2.png")
-    else:
-        speed_power = Power((300, 483), "poweruplocked.png")
-
-    all_sprites.add(speed_power)
-    power_sprites.add(speed_power)
-    speed_text = Text("(2)", "kenvector_future_thin", 8)
-    speed_text.rect.midtop = (300, 520)
-    all_sprites.add(speed_text)
-    text_sprites.add(speed_text)
-    powerup_text_sprites.add(speed_text)
-    
-    health_power = Power((376, 483), "powerup3.png")
-    all_sprites.add(health_power)
-    power_sprites.add(health_power)
-
-    health_text = Text("(3)", "kenvector_future_thin", 8)
-    health_text.rect.midtop = (376, 520)
-    all_sprites.add(health_text)
-    text_sprites.add(health_text)
-    powerup_text_sprites.add(health_text)
-
-
-def remove_powers():
-    for power in power_sprites:
-        all_sprites.remove(power)
-    power_sprites.empty()
-
-    for text in powerup_text_sprites:
-        all_sprites.remove(text)
-        text_sprites.remove(text)
-    powerup_text_sprites.empty()
-
-
-def reset_game_results():
-    with open("survoids/game_results.txt", "w") as game_results:
-        game_results.write("This is the text file where game data is saved.\n\n")
-
-
-def store_game_info(score:int, level:int, wave:int):
-    time_elapsed:float = pygame.time.get_ticks() / 1000
-
-    with open("survoids/game_results.txt", "a") as game_results:
-        game_results.write(f"Score: {score}\n")
-        game_results.write(f"Wave: {wave}\n")
-        game_results.write(f"Level: {level}\n")
-        game_results.write(f"Time elapsed: {time_elapsed:.2f}s\n\n")
-
-
-def display_end_screen():
-    all_sprites.add(end_screen)
-    screen_effect_sprites.add(end_screen)
-
-    game_over_text = Text("GAME OVER", "kenvector_future", 75)
-    game_over_text.rect.center = (300, 200)
-    all_sprites.add(game_over_text)
-    text_sprites.add(game_over_text)
-
-
-## Classes 
+## Classes
 
 class Background(pygame.sprite.Sprite):
+    """The background image class.
+
+    Attributes:
+        image (surf): The blue.png image scaled to the size of the screen.
+        rect (rect): The rect of the background image.
+    """
     def __init__(self):
+        """Initialises the background object."""
         super().__init__()
         self._layer = 0
         self.image = pygame.image.load('survoids/images/blue.png')
@@ -412,34 +81,76 @@ class Background(pygame.sprite.Sprite):
 
 
 class Mouse(pygame.sprite.Sprite):
+    """The mouse cursor class.
+
+    Attributes:
+        image (surf): The crosshair.png image.
+        surf (surf): The surface of the mouse cursor.
+        rect (rect): The rect of the mouse cursor.
+    """
     def __init__(self, *groups):
+        """Initialises the mouse object."""
         super().__init__(*groups)
         self._layer = 9
         self.image = pygame.image.load('survoids/images/crosshair.png').convert_alpha()
         self.surf = pygame.Surface((30,33))
         self.rect = self.surf.get_rect()
-    
+
     def update(self):
+        """Updates the mouse object to the position of the actual mouse."""
         pos = pygame.mouse.get_pos()
         self.rect.x = pos[0]
         self.rect.y = pos[1]
 
 
 class Player(pygame.sprite.Sprite):
+    """The player spaceship class.
 
+    Attributes:
+        image (surf): The player.png image scaled to half the size.
+        NORMAL_IMAGE (surf): The normal player.png used to revert the player once i-frames disappear.
+        IMMUNE_IMAGE (surf): The player_immune.png used when the player has i-frames.
+        original_image (surf): Used as a placeholder for scaling and rotating the player image.
+        surf (surf): The surface of the player.
+        rect (rect): The rect of the player.
+        angle (float): The angle of the player.
+        acceleration_up (float): The current upwards acceleration of the player.
+        acceleration_down (float): The current downwards acceleration of the player.
+        acceleration_left (float): The current leftwards acceleration of the player.
+        acceleration_right (float): The current rightwards acceleration of the player.
+        MAX_ACCELERATION_UP (float): The max upward acceleration of the player.
+        MAX_ACCELERATION_DOWN (float): The max downward acceleration of the player.
+        MAX_ACCELERATION_LEFT (float): The max leftward acceleration of the player.
+        MAX_ACCELERATION_RIGHT (float): The max rightward acceleration of the player.
+        acceleration_speed (float): The current acceleration speed of the player.
+        deceleration_speed (float): The current deceleration speed of the player.
+        lives (int): The current number of lives the player has.
+        immune (bool): The player's immunity state.
+        immune_timer (int): The number of frames before the player's immunity runs out.
+        IMMUNE_TIMEOUT (int): The number of frames when the player is no longer immune.
+        experience (int): The number of experience the player has.
+        level (int): The level number of the player.
+        levels_used (int): The number of levels the player has used.
+        LEVEL_UP_THRESHOLD (int): The threshold of experience required before the player levels up.
+        LEVEL_HOLDOFF (int): The max number of frames before the player can choose another power up.
+        level_delay (int): The current number of frames before the player can choose another power up.
+        bullet_holdoff (int): The max number of frames before the player fires another bullet.
+        bullet_delay (int): The current number of frames before the player fires another bullet.
+    """
     def __init__(self, *groups):
+        """Initialises the player object."""
         super().__init__(*groups)
         self._layer = 5
         unscaled_image = pygame.image.load('survoids/images/player.png').convert_alpha()
-        unscaled_immune_image = pygame.image.load('survoids/images/player_immune.png').convert_alpha()
+        unscaled_IMMUNE_IMAGE = pygame.image.load('survoids/images/player_immune.png').convert_alpha()
         self.image = pygame.transform.scale(unscaled_image, (45, 37))
-        self.normal_image = pygame.transform.scale(unscaled_image, (45, 37))
-        self.immune_image = pygame.transform.scale(unscaled_immune_image, (45, 37))
-        self.original_image = self.normal_image
+        self.NORMAL_IMAGE = pygame.transform.scale(unscaled_image, (45, 37))
+        self.IMMUNE_IMAGE = pygame.transform.scale(unscaled_IMMUNE_IMAGE, (45, 37))
+        self.original_image = self.NORMAL_IMAGE
 
         self.surf = pygame.Surface((45,37))
         self.rect = self.surf.get_rect(center = (WIDTH/2, HEIGHT/2))
-        self.angle = 90
+        self.angle = 90.0
 
         self.acceleration_up = 0.0
         self.acceleration_down = 0.0
@@ -456,6 +167,8 @@ class Player(pygame.sprite.Sprite):
 
         self.lives = 3
         self.immune = False
+        self.immune_timer = 0
+        self.IMMUNE_TIMEOUT = FPS * 2
 
         self.experience = 0
 
@@ -469,66 +182,91 @@ class Player(pygame.sprite.Sprite):
         self.bullet_delay = 0
 
     def get_angle(self) -> float:
+        """Returns the angle of the player.
+
+        Returns:
+            float: The player's angle.
+        """
         return self.angle
-    
-    def get_pos(self) -> tuple:
+
+    def get_pos(self) -> tuple[int, int]:
+        """Returns the position of the player.
+
+        Returns:
+            tuple[int, int]: The x and y coordinates of the player.
+        """
         x = self.rect.centerx
         y = self.rect.centery
         return (x,y)
 
     def set_vulnerable(self) -> None:
+        """Sets the immune state of the player to False."""
         self.immune = False
 
-    def update(self):
-        if game_state == "in_game":
-            keyboard = pygame.key.get_pressed()
+    def update_immune_timer(self) -> None:
+        """Updates the immune timer."""
+        self.immune_timer += 1
 
-            # Accelerate
-            if keyboard[K_w]:
-                if self.acceleration_up < self.MAX_ACCELERATION_UP:
-                    self.acceleration_up += self.acceleration_speed
-            if keyboard[K_s]:
-                if self.acceleration_down < self.MAX_ACCELERATION_DOWN:
-                    self.acceleration_down += self.acceleration_speed
-            if keyboard[K_a]:
-                if self.acceleration_left < self.MAX_ACCELERATION_LEFT:
-                    self.acceleration_left += self.acceleration_speed
-            if keyboard[K_d]:
-                if self.acceleration_right < self.MAX_ACCELERATION_RIGHT:
-                    self.acceleration_right += self.acceleration_speed
-        
-        if game_state != "paused":
-            # Decelerate
-            if self.acceleration_up > 0.0:
-                self.acceleration_up -= self.deceleration_speed
-            if self.acceleration_down > 0.0:
-                self.acceleration_down -= self.deceleration_speed
-            if self.acceleration_left > 0.0:
-                self.acceleration_left -= self.deceleration_speed
-            if self.acceleration_right > 0.0:
-                self.acceleration_right -= self.deceleration_speed
-        
-            # Calculate movement
-            acceleration_up_rounded = round(self.acceleration_up)
-            acceleration_down_rounded = round(self.acceleration_down)
-            acceleration_right_rounded = round(self.acceleration_right)
-            acceleration_left_rounded = round(self.acceleration_left)
-            
-            self.rect.y = self.rect.y - acceleration_up_rounded + acceleration_down_rounded
-            self.rect.x = self.rect.x - acceleration_left_rounded + acceleration_right_rounded
+    def check_immunity(self) -> None:
+        """Creates an IMMUNE_OFF event if the player's immunity has worn off."""
+        if self.immune_timer >= self.IMMUNE_TIMEOUT:
+            pygame.event.post(pygame.event.Event(IMMUNE_OFF))
+            self.immune_timer = 0
+        else:
+            self.update_immune_timer()
+
+    def move(self) -> None:     # Should only trigger if the game state is in_game
+        """Changes the acceleration values of the player."""
+        keyboard = pygame.key.get_pressed()
+
+        # Accelerate
+        if keyboard[K_w]:
+            if self.acceleration_up < self.MAX_ACCELERATION_UP:
+                self.acceleration_up += self.acceleration_speed
+        if keyboard[K_s]:
+            if self.acceleration_down < self.MAX_ACCELERATION_DOWN:
+                self.acceleration_down += self.acceleration_speed
+        if keyboard[K_a]:
+            if self.acceleration_left < self.MAX_ACCELERATION_LEFT:
+                self.acceleration_left += self.acceleration_speed
+        if keyboard[K_d]:
+            if self.acceleration_right < self.MAX_ACCELERATION_RIGHT:
+                self.acceleration_right += self.acceleration_speed
+
+    def calc_movement(self) -> None:        # Should not trigger if the game state is paused
+        """Calculates the movement of the player and updates the player's coordinates."""
+        # Decelerate
+        if self.acceleration_up > 0.0:
+            self.acceleration_up -= self.deceleration_speed
+        if self.acceleration_down > 0.0:
+            self.acceleration_down -= self.deceleration_speed
+        if self.acceleration_left > 0.0:
+            self.acceleration_left -= self.deceleration_speed
+        if self.acceleration_right > 0.0:
+            self.acceleration_right -= self.deceleration_speed
+
+        # Calculate movement
+        acceleration_up_rounded = round(self.acceleration_up)
+        acceleration_down_rounded = round(self.acceleration_down)
+        acceleration_right_rounded = round(self.acceleration_right)
+        acceleration_left_rounded = round(self.acceleration_left)
+
+        self.rect.y = self.rect.y - acceleration_up_rounded + acceleration_down_rounded
+        self.rect.x = self.rect.x - acceleration_left_rounded + acceleration_right_rounded
+
+    def update(self):
+        """Updates the player's level, powers and keeps the object on screen."""
+        keyboard = pygame.key.get_pressed()
 
         # Level up
-
         if self.experience >= self.LEVEL_UP_THRESHOLD:
             self.experience -= self.LEVEL_UP_THRESHOLD
             self.level += 1
 
         # Power up
-
         if self.level > self.levels_used:
             if self.level_delay <= 0:
-                if not power_sprites:
-                    display_powers()
+                pygame.event.post(pygame.event.Event(LEVEL_UP))
 
                 used_level = False
 
@@ -542,14 +280,13 @@ class Player(pygame.sprite.Sprite):
                 elif keyboard[K_3]:
                     self.lives += 1
                     used_level = True
-                
+
                 if used_level:
                     self.levels_used += 1
                     self.level_delay = self.LEVEL_HOLDOFF
-                    remove_powers()
+                    pygame.event.post(pygame.event.Event(LEVEL_UP_COMPLETE))
             else:
                 self.level_delay -= 1
-
 
         # Keep player on-screen
         if self.rect.x > WIDTH - 45:
@@ -564,14 +301,22 @@ class Player(pygame.sprite.Sprite):
         if self.rect.y < 0:
             self.rect.y = 0
             self.acceleration_up = 0.0
-        
-        # Keep rotation on death
-        if game_state == "game_over":
-            rotate_object(self)
-        
+
 
 class Thruster(pygame.sprite.Sprite):
+    """The thruster class that appears behind the player.
+
+    Attributes:
+        image (surf): The thruster.png image of the thruster.
+        original_image (surf): Used as a placeholder for scaling and rotating the thruster image.
+        surf (surf): The surface of the thruster.
+        rect (rect): The rect of the thruster.
+        OFFSET (int): The offset of the thruster for correctly positioning it behind the player.
+        angle (float): The angle of the thruster.
+        visibility (bool): Whether the thruster is visible or not.
+    """
     def __init__(self):
+        """Initialises the thruster object."""
         super().__init__()
         self._layer = 4
         self.image = pygame.image.load('survoids/images/thruster.png').convert_alpha()
@@ -579,25 +324,52 @@ class Thruster(pygame.sprite.Sprite):
         self.surf = pygame.Surface((14,31))
         self.rect = self.surf.get_rect()
         self.OFFSET = 30
-        self.angle = 90
+        self.angle = 90.0
+        self.visibility = False
 
-    def update(self):
-        if game_state == "in_game":
-            keyboard = pygame.key.get_pressed()
+    def change_visibility(self, new_visibility: bool) -> None:
+        """Changes the visibility of the thruster object if it is different to the new visibility value.
 
-            # Visibility
-            if keyboard[K_w]:
-                screen.blit(self.image, self.rect)
-            if keyboard[K_s]:
-                screen.blit(self.image, self.rect)
-            if keyboard[K_a]:
-                screen.blit(self.image, self.rect)
-            if keyboard[K_d]:
-                screen.blit(self.image, self.rect)
+        Args:
+            new_visibility (bool): The new visibility value of the thruster object.
+        """
+        if self.visibility != new_visibility:
+            self.visibility = new_visibility
+
+    def update_visibility(self) -> None:
+        """Updates the thruster's visibility."""
+        keyboard = pygame.key.get_pressed()
+
+        # Visibility
+        if keyboard[K_w] or keyboard[K_s] or keyboard[K_a] or keyboard[K_d]:
+            if self.visibility != True:
+                self.visibility = True
+        else:
+            if self.visibility != False:
+                self.visibility = False
 
 
 class Bullet(pygame.sprite.Sprite):
+    """The bullet class for player and enemy bullets.
+
+    Attributes:
+        image (surf): The image of the bullet scaled and rotated correctly.
+        original_image (surf): Used as a placeholder for scaling and rotating the bullet image in the angle of the object that fires it.
+        surf (surf): The surface for the bullet.
+        rect (rect): The rect of the bullet.
+        angle (float): The angle of the bullet.
+        SPEED (int): The speed of the bullet.
+    """
     def __init__(self, angle:float, pos:tuple, img:str, size:tuple, speed:int):
+        """Initialises the bullet object.
+
+        Args:
+            angle (float): The angle of the object that fires it.
+            pos (tuple): The position of the object that fires it.
+            img (str): The image of the bullet.
+            size (tuple): The size the bullet should be scaled to.
+            speed (int): The speed of the bullet.
+        """
         super().__init__()
         self._layer = 1
 
@@ -612,22 +384,43 @@ class Bullet(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center = self.rect.center)
 
         self.SPEED = speed
-    
-    def update(self):
-        if game_state == "in_game":
-            angle = -math.radians(self.angle)
-            self.rect.centerx = self.rect.centerx + round(self.SPEED * math.sin(angle))
-            self.rect.centery = self.rect.centery - round(self.SPEED * math.cos(angle))
 
-            if self.rect.centerx > 620 or self.rect.centerx < -20 or self.rect.centery > 620 or self.rect.centery < -20:
-                self.kill()
+    def move(self) -> None:
+        """Updates the bullet object's position, killing it if it exits the screen."""
+        angle = -math.radians(self.angle)
+        self.rect.centerx = self.rect.centerx + round(self.SPEED * math.sin(angle))
+        self.rect.centery = self.rect.centery - round(self.SPEED * math.cos(angle))
+
+        if self.rect.centerx > 620 or self.rect.centerx < -20 or self.rect.centery > 620 or self.rect.centery < -20:
+            self.kill()
 
 
 class Enemy(pygame.sprite.Sprite):
+    """The base enemy class.
+
+    Attributes:
+        value (int): The value of the Enemy class.
+        likelihood (int): The likelihood that the Enemy class appears.
+        image (surf): The image of the enemy scaled and rotated correctly.
+        original_image (surf): Used as a placeholder for scaling and rotating the enemy image.
+        surf (surf): The surface for the enemy.
+        rect (rect): The rect of the enemy.
+        SPEED (int): The speed of the enemy.
+        angle (float): The angle of the enemy, first used to calculate its spawn location.
+        radians (float): The angle of the enemy in degrees and flipped.
+        SPAWN_RADIUS (int): The average distance from the centre of the screen that the enemy should spawn from.
+    """
     value:int = 0
     likelihood:int = 0
 
-    def __init__(self, img:str, size:tuple, speed:int|float):
+    def __init__(self, img: str = "enemy_a.png", size: tuple = (26, 21), speed: int | float = 2):
+        """Initialises the enemy object.
+
+        Args:
+            img (str, optional): The png of the enemy image. Defaults to "enemy_a.png".
+            size (tuple, optional): The size the enemy should be scaled to. Defaults to (26, 21).
+            speed (int | float, optional): The speed of the enemy. Defaults to 2.
+        """
         super().__init__()
         self._layer = 2
 
@@ -636,63 +429,105 @@ class Enemy(pygame.sprite.Sprite):
         self.original_image = pygame.transform.scale(unscaled_image, size)
         self.surf = pygame.Surface(size)
         self.rect = self.surf.get_rect()
-        
+
         self.SPEED = speed
 
         self.angle = rand.randint(0,360)
         self.radians = -math.radians(self.angle)
-        self.spawn_radius = 500
-        self.rect.centerx = 300 + round((self.spawn_radius + rand.randint(0,550)) * math.sin(self.radians))
-        self.rect.centery = 300 + round((self.spawn_radius + rand.randint(0,550)) * math.cos(self.radians))
+        self.SPAWN_RADIUS = 500
+        self.rect.centerx = 300 + round((self.SPAWN_RADIUS + rand.randint(0,550)) * math.sin(self.radians))
+        self.rect.centery = 300 + round((self.SPAWN_RADIUS + rand.randint(0,550)) * math.cos(self.radians))
 
     def get_angle(self) -> float:
+        """Returns the angle of the enemy.
+
+        Returns:
+            float: The angle of the enemy.
+        """
         return self.angle
 
     def get_pos(self) -> tuple:
+        """Returns the position of the enemy.
+
+        Returns:
+            tuple: The x and y coordinates of the enemy.
+        """
         x = self.rect.centerx
         y = self.rect.centery
         return (x,y)
-    
-    def update(self):
-        # Move towards player
-        if game_state == "in_game":
-            self.radians = -math.radians(self.angle)
-            self.rect.centerx = self.rect.centerx + round(self.SPEED * math.sin(self.radians))
-            self.rect.centery = self.rect.centery - round(self.SPEED * math.cos(self.radians))
+
+    def move(self) -> None:
+        """Moves the enemy towards the player."""
+        self.radians = -math.radians(self.angle)
+        self.rect.centerx = self.rect.centerx + round(self.SPEED * math.sin(self.radians))
+        self.rect.centery = self.rect.centery - round(self.SPEED * math.cos(self.radians))
 
 
 class EnemyA(Enemy):
+    """The A type of the enemy class.
+
+    Attributes:
+        value (int): The value of the Enemy class.
+        likelihood (int): The likelihood that the Enemy class appears.
+    """
     value = 5
     likelihood = 10
 
     def __init__(self):
+        """Initialises the A type enemy with the enemy_a.png, a quarter of the size and a speed of 2."""
         super().__init__(img="enemy_a.png", size=(26, 21), speed=2)
 
 
 class EnemyB(Enemy):
+    """The B type of the enemy class.
+
+    Attributes:
+        value (int): The value of the Enemy class.
+        likelihood (int): The likelihood that the Enemy class appears.
+        BULLET_HOLDOFF (int): The max number of frames before the B type enemy can fire another bullet.
+        bullet_delay (int): The current number of frames before the B type enemy can fire another bullet.
+    """
     value = 10
     likelihood = 0
 
     def __init__(self):
+        """Initialises the B type enemy with the enemy_b.png, a quarter of the size and a speed of 1."""
         super().__init__(img="enemy_b.png", size=(26, 21), speed=1)
 
         self.BULLET_HOLDOFF = 60
         self.bullet_delay = 0
-    
-    def update(self):
-        super().update()
 
+    def fire(self, all_sprites: pygame.sprite.LayeredUpdates, enemy_bullet_sprites: pygame.sprite.Group) -> None:
+        """Fire the bullet in the direction of the B type enemy if it can.
+
+        Args:
+            all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+            enemy_bullet_sprites (pygame.sprite.Group): The enemy bullet sprites group.
+        """
         if self.bullet_delay <= 0:
             bullet = Bullet(self.get_angle(), self.get_pos(), "enemy_b_bullet.png", (4, 16), 4)
-            all_sprites.add(bullet)
-            enemy_bullet_sprites.add(bullet)
+            add_sprite_to_groups(bullet, all_sprites, enemy_bullet_sprites)
             self.bullet_delay = self.BULLET_HOLDOFF
         else:
             self.bullet_delay -= 1
 
 
 class Hitmarker(pygame.sprite.Sprite):
-    def __init__(self, pos:tuple):
+    """The hitmarker class for when a bullet hits an enemy.
+
+    Attributes:
+        image (surf): The hit_marker.png image.
+        surf (surf): The surface of the hitmarker.
+        rect (rect): The rect of the hitmarker.
+        time (int): The number of frames the hitmarker has been on screen.
+        TIMEOUT (int): The number of frames before the hitmarker times out.
+    """
+    def __init__(self, pos:tuple[int, int]):
+        """Initialises the hitmarker object.
+
+        Args:
+            pos (tuple[int, int]): The position of the enemy the bullet struck for the hitmarker to appear at.
+        """
         super().__init__()
         self._layer = 3
 
@@ -701,14 +536,38 @@ class Hitmarker(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(center = pos)
 
         self.time = 0
+        self.TIMEOUT = 31       # 31 instead of 30 as update_time() is called immediately after initialisation of an object and before checking timeout
 
-    def update(self):
-        if game_state != "paused":
-            self.time += 1
+    def check_timeout(self) -> bool:
+        """Checks whether the hitmarker has timed out or not.
+
+        Returns:
+            bool: True if the hitmarker has timed out, False if not.
+        """
+        if self.time >= self.TIMEOUT:
+            return True
+        return False
+
+    def update_time(self):
+        """Updates the hitmarker object's time variable."""
+        self.time += 1
 
 
 class Power(pygame.sprite.Sprite):
-    def __init__(self, pos:tuple, image:str):
+    """The power up class.
+
+    Attributes:
+        image (surf): The image of the power up.
+        surf (surf): The surface of the power up.
+        rect (rect): The rect of the power up.
+    """
+    def __init__(self, pos:tuple[int, int], image:str):
+        """Initialisation of the power up object.
+
+        Args:
+            pos (tuple[int, int]): The position of the power up.
+            image (str): The power up image png.
+        """
         super().__init__()
         self._layer = 6
 
@@ -716,16 +575,30 @@ class Power(pygame.sprite.Sprite):
         self.surf = pygame.Surface((37,37))
         self.rect = self.surf.get_rect(center = pos)
 
-    def update(self):
-        pass
 
+class UserInterface(pygame.sprite.Sprite):
+    """The user interface class.
 
-class UI(pygame.sprite.Sprite):
-    def __init__(self, png: str, width: float, height: float, pos: tuple[int, int], scale: bool = False):
+    Attributes:
+        image (surf): The image of the user interface object.
+        surf (surf): The surface of the user interface.
+        rect (rect): The rect of the user interface.
+        clicked (bool): The state of whether the user interface is being clicked or not.
+    """
+    def __init__(self, img: str, width: float, height: float, pos: tuple[int, int], scale: bool = False):
+        """Initialises the user interface object.
+
+        Args:
+            img (str): The name of the user interface object including .png.
+            width (float): The width of the user interface object.
+            height (float): The height of the user interface object.
+            pos (tuple[int, int]): The position of the user interface on the screen.
+            scale (bool, optional): Whether the object should be scaled to the width and height or not. Defaults to False.
+        """
         super().__init__()
         self._layer = 6
 
-        self.image = pygame.image.load(f'survoids/images/{png}').convert_alpha()
+        self.image = pygame.image.load(f'survoids/images/{img}').convert_alpha()
 
         if scale:
             self.image = pygame.transform.scale(self.image, (width, height))
@@ -735,13 +608,35 @@ class UI(pygame.sprite.Sprite):
 
         self.clicked = False
 
-    def change_clicked(self, new_clicked):
+    def change_clicked(self, new_clicked: bool):
+        """Change the value of clicked to the new clicked value.
+
+        Args:
+            new_clicked (bool): The new value of clicked.
+        """
         if self.clicked != new_clicked:
             self.clicked = new_clicked
 
 
 class Text(pygame.sprite.Sprite):
+    """The text class.
+
+    Attributes:
+        words (str): The words of the text object.
+        colour (tuple[int, int, int]): The RGB value of the colour of the text object.
+        font (Font): The font of the text object.
+        surf (surf): The surface of the text object.
+        rect (rect): The rect of the text object.
+    """
     def __init__(self, initial: str, font_name: str, font_size: int, colour: tuple[int, int, int] = (255, 255, 255)):
+        """Initialises the text object.
+
+        Args:
+            initial (str): The initial words of the text object.
+            font_name (str): The name of the text's font's file excluding .ttf.
+            font_size (int): The size of the text's font.
+            colour (tuple[int, int, int], optional): The RGB value of the colour of the text object. Defaults to (255, 255, 255).
+        """
         super().__init__()
         self._layer = 7
 
@@ -751,18 +646,40 @@ class Text(pygame.sprite.Sprite):
         self.font = pygame.font.Font(f'survoids/fonts/{font_name}.ttf', font_size)
         self.surf = self.font.render(initial, True, self.colour)
         self.rect = self.surf.get_rect()
-    
+
     def change_colour(self, new_colour: tuple[int, int, int]):
+        """Changes the colour of the text object to the new colour.
+
+        Args:
+            new_colour (tuple[int, int, int]): The new RGB value of the colour of the text object.
+        """
         self.colour = new_colour
 
-    def update(self, new_text: str):
-        self.words = new_text
-        self.surf = self.font.render(new_text, True, self.colour)
+    def update_words(self, new_words: str):
+        """Updates the words of the text object to be the new words.
+
+        Args:
+            new_words (str): The new words for the text object.
+        """
+        self.words = new_words
+        self.surf = self.font.render(new_words, True, self.colour)
         self.rect = self.surf.get_rect()
 
 
 class ScreenEffect(pygame.sprite.Sprite):
-    def __init__(self, colour: tuple, alpha: int = 0):
+    """The screen effect class.
+
+    Attributes:
+        surf (surf): The surface of the screen effect object with transparency and colour values.
+        rect (rect): The rect of the screen effect, centered in the middle of the screen.
+    """
+    def __init__(self, colour: tuple[int, int, int], alpha: int = 0):
+        """Initialises the screen effect object.
+
+        Args:
+            colour (tuple[int, int, int]): The RGB value of the colour for the screen effect object.
+            alpha (int, optional): The transparency value of the screen effect object.. Defaults to 0.
+        """
         super().__init__()
         self._layer = 8
 
@@ -772,76 +689,690 @@ class ScreenEffect(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect(center = (WIDTH/2, HEIGHT/2))
 
 
-## Groups
+## Functions
 
-all_sprites = pygame.sprite.LayeredUpdates()
+def calculate_angle_between_points(p1, p2) -> float:
+    """Calculates the angle between two points.
 
-player_bullet_sprites = pygame.sprite.Group()
-enemy_sprites = pygame.sprite.Group()
-enemy_bullet_sprites = pygame.sprite.Group()
-hitmarker_sprites = pygame.sprite.Group()
+    Args:
+        p1 (pygame Sprite): Has a rect and angle.
+        p2 (pygame Sprite): Has a rect and angle.
 
-power_sprites = pygame.sprite.Group()
-ui_sprites = pygame.sprite.Group()
+    Returns:
+        float: The angle between the two points in degrees.
+    """
+    p1_coordinates: tuple[int, int] = p1.rect.center
+    p2_coordinates: tuple[int, int] = p2.rect.center
 
-text_sprites = pygame.sprite.Group()
+    x1: int = p1_coordinates[0]
+    y1: int = p1_coordinates[1]
 
-main_screen_sprites = pygame.sprite.Group()
-pause_screen_sprites = pygame.sprite.Group()
+    x2: int = p2_coordinates[0]
+    y2: int = p2_coordinates[1]
 
-wave_clear_sprites = pygame.sprite.Group()
-powerup_text_sprites = pygame.sprite.Group()
+    dx: int = x2 - x1
+    dy: int = y2 - y1
 
-screen_effect_sprites = pygame.sprite.Group()
+    radians: float = math.atan2(dy, dx)
+    angle: float = -math.degrees(radians) - 90
+
+    return angle
 
 
-## Objects
+def point_object_to_object(obj1, obj2) -> None:
+    """Changes the image of an object to face another object.
 
-background = Background()
+    Args:
+        obj1 (pygame Sprite): Object being changed, has a rect, image, original image and angle.
+        obj2 (pygame Sprite): Object being copied, has a rect.
+    """
+    obj1.angle = calculate_angle_between_points(obj1, obj2)
+    obj1.image = pygame.transform.rotate(obj1.original_image, obj1.angle)
+    obj1.rect = obj1.image.get_rect(center = obj1.rect.center)
 
-mouse = Mouse()
 
-title_text = Text("Survoids", "kenvector_future", 80)
-title_text.rect.midtop = (300, 40)
+def rotate_object(obj) -> None:
+    """Rotates an object based on its angle.
 
-play_text = Text("PLAY", "kenvector_future", 60)
-play_text.rect.midtop = (300, 260)
+    Args:
+        obj (pygame Sprite): Has a rect, image, original image and angle.
+    """
+    obj.image = pygame.transform.rotate(obj.original_image, obj.angle)
+    obj.rect = obj.image.get_rect(center = obj.rect.center)
 
-play_text_effect_1 = Text("PLAY", "kenvector_future", 60, (0, 0, 0))
-play_text_effect_1.rect.midtop = (298, 258)
 
-play_text_effect_2 = Text("PLAY", "kenvector_future", 60, (0, 0, 0))
-play_text_effect_2.rect.midtop = (301, 261)
+def add_sprite_to_groups(sprite: pygame.sprite.Sprite, *groups: pygame.sprite.Group | pygame.sprite.LayeredUpdates) -> None:
+    """Adds the sprite to each provided group.
 
-play_button = UI("button.png", 240, 78, (293, 295), True)
+    Args:
+        sprite (pygame.sprite.Sprite): A pygame sprite.
+        *groups (pygame.sprite.Group | pygame.sprite.LayeredUpdates): Some number of sprite groups.
+    """
+    for group in groups:
+        group.add(sprite)
 
-player = Player()
 
-thruster = Thruster()
+def remove_sprite_from_groups(sprite: pygame.sprite.Sprite, *groups: pygame.sprite.Group | pygame.sprite.LayeredUpdates) -> None:
+    """Removes the sprite from each provided group.
 
-x_ui = UI("x.png", 17, 17, (52, 21))
+    Args:
+        sprite (pygame.sprite.Sprite): A pygame sprite.
+        *groups (pygame.sprite.Group | pygame.sprite.LayeredUpdates): Some number of sprite groups.
+    """
+    for group in groups:
+        group.remove(sprite)
 
-player_life_icon = UI("life_ui.png", 33, 26, (21, 20))
 
-lives_text = Text(str(player.lives), "kenvector_future", 24)
-lives_text.rect.topleft = (68, 8)
+def adjust_thruster(thruster: Thruster, player: Player) -> None:
+    """Adjusts the thruster to be positioned behind the player.
 
-score_text = Text(str(score), "kenvector_future_thin", 36)
-score_text.rect.topright = (596, 8)
+    Args:
+        thruster (Thruster): The thruster object.
+        player (Player): The player object.
+    """
+    player_angle = player.get_angle()
+    angle = -math.radians(player_angle)
 
-pause_screen = ScreenEffect((0, 0, 20), 60)
+    thruster.rect.centerx = player.rect.centerx - round(thruster.OFFSET * math.sin(angle))
+    thruster.rect.centery = player.rect.centery + round(thruster.OFFSET * math.cos(angle))
 
-pause_text = Text("PAUSED", "kenvector_future", 120)
-pause_text.rect.midtop = (300, 240)
+    thruster.angle = player.angle
+    thruster.image = pygame.transform.rotate(thruster.original_image, thruster.angle)
+    thruster.rect = thruster.image.get_rect(center = thruster.rect.center)
 
-end_screen = ScreenEffect((0, 0, 10), 60)
+
+def fire_bullet(player: Player, all_sprites: pygame.sprite.LayeredUpdates, bullet_sprites: pygame.sprite.Group) -> None:
+    """Creates a bullet in the direction of the player if no delay and space is pressed down.
+
+    Args:
+        player (Player): The player object.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        bullet_sprites (pygame.sprite.Group): The bullet sprites group for the bullet to be added to.
+    """
+    keyboard = pygame.key.get_pressed()
+
+    if player.bullet_delay <= 0:
+        if keyboard[K_SPACE]:
+            bullet = Bullet(player.get_angle(), player.get_pos(), "bullet.png", (4, 24), 25)
+            add_sprite_to_groups(bullet, all_sprites, bullet_sprites)
+            player.bullet_delay = player.bullet_holdoff
+    else:
+        player.bullet_delay -= 1
+
+
+def end_wave(enemy_sprites: pygame.sprite.Group) -> bool:
+    """Returns whether the wave has ended or not using the number of enemies.
+
+    Args:
+        enemy_sprites (pygame.sprite.Group): The enemy sprites group.
+
+    Returns:
+        bool: True if there are no enemies in the sprite group, False if not
+    """
+    if len(enemy_sprites) == 0:
+        return True
+    return False
+
+
+def display_wave_clear(all_sprites: pygame.sprite.LayeredUpdates, text_sprites: pygame.sprite.Group, wave_clear_sprites: pygame.sprite.Group, wave: int) -> None:
+    """Displays the wave clear text.
+
+    Args:
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+        wave_clear_sprites (pygame.sprite.Group): The wave clear sprites group.
+        wave (int): The wave number.
+    """
+    wave_clear = Text(f"Wave {wave} Cleared", "kenvector_future_thin", 60)
+    wave_clear.rect.center = (300, 280)
+    add_sprite_to_groups(wave_clear, all_sprites, text_sprites, wave_clear_sprites)
+
+
+def remove_wave_clear(wave_clear_sprites: pygame.sprite.Group, all_sprites: pygame.sprite.LayeredUpdates, text_sprites: pygame.sprite.Group) -> None:
+    """Removes the sprites in the wave clear sprites group from all sprite groups.
+
+    Args:
+        wave_clear_sprites (pygame.sprite.Group): The wave clear sprites group.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+    """
+    for text in wave_clear_sprites.sprites():
+        remove_sprite_from_groups(text, all_sprites, text_sprites, wave_clear_sprites)
+
+
+def spawn_enemies(enemy_wave: list[type[Enemy]], all_sprites: pygame.sprite.LayeredUpdates, enemy_sprites: pygame.sprite.Group) -> None:
+    """Spawns the enemies in the given wave.
+
+    Args:
+        enemy_wave (list[type[Enemy]]): The list of enemy classes to be spawned.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        enemy_sprites (pygame.sprite.Group): The enemy sprites group for the enemy to be added to.
+    """
+    for enemy in enemy_wave:
+        new_enemy = enemy()
+        add_sprite_to_groups(new_enemy, all_sprites, enemy_sprites)
+
+
+def calc_wave(wave_value: int) -> list[type[Enemy]]:
+    """Calculates and returns a list of enemy classes for a given wave.
+
+    Args:
+        wave_value (int): The value of the current wave.
+
+    Returns:
+        list[type[Enemy]]: A list of enemy classes for the wave value.
+    """
+    enemy_wave: list[type[Enemy]] = []
+    enemy_types: list[type[Enemy]] = [EnemyA, EnemyB]
+    enemy_likelihood: list[type[Enemy]] = []
+    current_wave_value: int = wave_value
+
+    for enemy_type in enemy_types:
+        for _ in range(enemy_type.likelihood):
+            enemy_likelihood.append(enemy_type)
+
+    while current_wave_value >= 5:  # smallest enemy value is 5
+        random_num: int = rand.randrange(0, len(enemy_likelihood))
+        enemy_type: type[Enemy] = enemy_likelihood[random_num]
+
+        if current_wave_value - enemy_type.value < 0:
+            continue
+
+        enemy_wave.append(enemy_type)
+        current_wave_value -= enemy_type.value
+
+    return enemy_wave
+
+
+def change_enemy_likelihoods() -> None:
+    """Changes the likelihood values of the enemy classes."""
+    EnemyA.likelihood -= 1
+    EnemyB.likelihood += 1
+
+
+def spawn_waves(
+            all_sprites: pygame.sprite.LayeredUpdates,
+            enemy_sprites: pygame.sprite.Group,
+            text_sprites: pygame.sprite.Group,
+            wave_clear_sprites: pygame.sprite.Group,
+            wave: int,
+            wave_value:int,
+            wave_delay: int
+) -> tuple[int, int, int]:
+    """Spawns waves of enemies if the previous wave has ended and wave delay is 0 or less.
+
+    Args:
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        enemy_sprites (pygame.sprite.Group): The enemy sprites group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+        wave_clear_sprites (pygame.sprite.Group): The wave clear sprites group.
+        wave (int): The wave number.
+        wave_value (int): The value of the current wave.
+        wave_delay (int): The delay before the next wave can spawn.
+
+    Returns:
+        tuple[int, int, int]: Updated values of wave_value, wave and wave_delay
+    """
+    if end_wave(enemy_sprites) == True:
+        if not wave_clear_sprites and wave != 0:
+            display_wave_clear(all_sprites, text_sprites, wave_clear_sprites, wave)
+            wave_delay = WAVE_HOLDOFF
+
+        if wave_delay <= 0:
+            enemy_wave = calc_wave(wave_value)
+            spawn_enemies(enemy_wave, all_sprites, enemy_sprites)
+
+            remove_wave_clear(wave_clear_sprites, all_sprites, text_sprites)
+            change_enemy_likelihoods()
+            wave_value += 10
+            wave += 1
+        else:
+            wave_delay -= 1
+    return wave_value, wave, wave_delay
+
+
+def display_main_screen(
+            title_text: Text,
+            play_text_effect_1: Text,
+            play_text: Text,
+            play_text_effect_2: Text,
+            play_button: UserInterface,
+            all_sprites: pygame.sprite.LayeredUpdates,
+            text_sprites: pygame.sprite.Group,
+            user_interface_sprites: pygame.sprite.Group,
+            main_screen_sprites: pygame.sprite.Group
+) -> None:
+    """Displays the main screen objects.
+
+    Args:
+        title_text (Text): The title text object.
+        play_text_effect_1 (Text): The play text object's effect 1.
+        play_text (Text): The play text object.
+        play_text_effect_2 (Text): The play text object's effect 2.
+        play_button (UserInterface): The play button.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+        user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
+        main_screen_sprites (pygame.sprite.Group): The main screen sprites group.
+    """
+    add_sprite_to_groups(title_text, all_sprites, text_sprites, main_screen_sprites)
+
+    add_sprite_to_groups(play_text_effect_1, all_sprites, text_sprites, main_screen_sprites)
+
+    add_sprite_to_groups(play_text, all_sprites, text_sprites, main_screen_sprites)
+
+    add_sprite_to_groups(play_text_effect_2, all_sprites, text_sprites, main_screen_sprites)
+
+    add_sprite_to_groups(play_button, all_sprites, user_interface_sprites, main_screen_sprites)
+
+
+def remove_main_screen(main_screen_sprites: pygame.sprite.Group, all_sprites: pygame.sprite.LayeredUpdates, text_sprites: pygame.sprite.Group, user_interface_sprites: pygame.sprite.Group) -> None:
+    """Removes all sprites in the main screen sprites group from their groups.
+
+    Args:
+        main_screen_sprites (pygame.sprite.Group): The main screen sprites group.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+        user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
+    """
+    for sprite in main_screen_sprites.sprites():
+        if sprite in text_sprites:
+            remove_sprite_from_groups(sprite, all_sprites, text_sprites, main_screen_sprites)
+        elif sprite in user_interface_sprites:
+            remove_sprite_from_groups(sprite, all_sprites, user_interface_sprites, main_screen_sprites)
+
+
+def display_background(background: Background, all_sprites: pygame.sprite.LayeredUpdates) -> None:
+    """Displays the background object.
+
+    Args:
+        background (Background): The background image object.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+    """
+    add_sprite_to_groups(background, all_sprites)
+
+
+def display_mouse(mouse: Mouse, all_sprites: pygame.sprite.LayeredUpdates) -> None:
+    """Displays the mouse object.
+
+    Args:
+        mouse (Mouse): The mouse image object.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+    """
+    add_sprite_to_groups(mouse, all_sprites)
+
+
+def display_pause_screen(
+            pause_screen: ScreenEffect,
+            pause_text: Text,
+            all_sprites: pygame.sprite.LayeredUpdates,
+            screen_effect_sprites: pygame.sprite.Group,
+            text_sprites: pygame.sprite.Group,
+            pause_screen_sprites: pygame.sprite.Group
+) -> None:
+    """Displays the pause screen objects.
+
+    Args:
+        pause_screen (ScreenEffect): The pause screen effect object.
+        pause_text (Text): The pause screen text object.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        screen_effect_sprites (pygame.sprite.Group): The screen effect sprites group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+        pause_screen_sprites (pygame.sprite.Group): The pause screen sprites group.
+    """
+    add_sprite_to_groups(pause_screen, all_sprites, screen_effect_sprites, pause_screen_sprites)
+
+    add_sprite_to_groups(pause_text, all_sprites, text_sprites, pause_screen_sprites)
+
+
+def remove_pause_screen(
+            pause_screen_sprites: pygame.sprite.Group,
+            all_sprites: pygame.sprite.LayeredUpdates,
+            screen_effect_sprites: pygame.sprite.Group,
+            text_sprites: pygame.sprite.Group
+) -> None:
+    """Removes all sprites in the pause screen sprites group from their groups.
+
+    Args:
+        pause_screen_sprites (pygame.sprite.Group): The pause screen sprites group.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        screen_effect_sprites (pygame.sprite.Group): The screen effect sprites group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+    """
+    for sprite in pause_screen_sprites.sprites():
+        if sprite in screen_effect_sprites:
+            remove_sprite_from_groups(sprite, all_sprites, screen_effect_sprites, pause_screen_sprites)
+        elif sprite in text_sprites:
+            remove_sprite_from_groups(sprite, all_sprites, text_sprites, pause_screen_sprites)
+
+
+def display_player(player: Player, thruster: Thruster, all_sprites: pygame.sprite.LayeredUpdates) -> None:
+    """Displays the player object and its thruster.
+
+    Args:
+        player (Player): The player object.
+        thruster (Thruster): The thruster object.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+    """
+    add_sprite_to_groups(player, all_sprites)
+    add_sprite_to_groups(thruster, all_sprites)
+
+
+def display_user_interface(
+            x_ui: UserInterface,
+            player_life_icon: UserInterface,
+            lives_text: Text,
+            score_text: Text,
+            all_sprites: pygame.sprite.LayeredUpdates,
+            user_interface_sprites: pygame.sprite.Group,
+            text_sprites: pygame.sprite.Group
+) -> None:
+    """Displays the user interface objects.
+
+    Args:
+        x_ui (UserInterface): The X user interface object.
+        player_life_icon (UserInterface): The player life icon object.
+        lives_text (Text): The lives text object.
+        score_text (Text): The score text object.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
+        text_sprites (pygame.sprite.Group): The text sprites object.
+    """
+    add_sprite_to_groups(x_ui, all_sprites, user_interface_sprites)
+
+    add_sprite_to_groups(player_life_icon, all_sprites, user_interface_sprites)
+
+    add_sprite_to_groups(lives_text, all_sprites, text_sprites)
+
+    add_sprite_to_groups(score_text, all_sprites, text_sprites)
+
+
+def update_text(lives:int, score: int, lives_text: Text, score_text: Text) -> None:
+    """Updates the lives text and score text objects.
+
+    Args:
+        lives (int): The number of lives of the player.
+        score (int): The score number.
+        lives_text (Text): The lives text object.
+        score_text (Text): The score text object.
+    """
+    lives_text.update_words(str(lives))
+    lives_text.rect.topleft = (68, 8)
+    score_text.update_words(str(score))
+    score_text.rect.topright = (596, 8)
+
+
+def update_stats(player: Player, score: int) -> int:
+    """Updates the stats of score and player experience.
+
+    Args:
+        player (Player): The player object.
+        score (int): The score number.
+
+    Returns:
+        int: Updated score number.
+    """
+    player.experience += 4
+    return score + 20
+
+
+def update_game_state(game_state: str, previous_game_state: str, new_state:str) -> tuple[str, str]:
+    """Updates the game's state.
+
+    Args:
+        game_state (str): The current game state.
+        previous_game_state (str): The previous game state.
+        new_state (str): The new game state.
+
+    Returns:
+        tuple[str, str]: The game state followed by its previous state.
+    """
+    previous_game_state = game_state
+    game_state = new_state
+    return game_state, previous_game_state
+
+
+def check_mouse_click(obj) -> bool:
+    """Checks whether the mouse is clicking on the object or not.
+
+    Args:
+        obj (pygame Sprite): Has a rect.
+
+    Returns:
+        bool: True if the mouse is clicking on the object, False if not
+    """
+    if obj.rect.collidepoint(pygame.mouse.get_pos()):
+        return True
+    return False
+
+
+def check_game_over(lives: int) -> bool:
+    """Checks whether the game is over or not using the player's lives.
+
+    Args:
+        lives (int): The number of lives of the player.
+
+    Returns:
+        bool: True if the player has died, False if they are alive.
+    """
+    if lives <= 0:
+        return True
+    else:
+        return False
+
+
+def display_powers(
+            player: Player,
+            all_sprites: pygame.sprite.LayeredUpdates,
+            power_sprites: pygame.sprite.Group,
+            text_sprites: pygame.sprite.Group,
+            power_up_text_sprites: pygame.sprite.Group,
+) -> None:
+    """Displays the power objects and their text objects.
+
+    Args:
+        player (Player): The player object.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        power_sprites (pygame.sprite.Group): The power sprites group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+        power_up_text_sprites (pygame.sprite.Group): The power up text sprites group.
+    """
+    if player.bullet_holdoff > 6:
+        lightning_power = Power((224, 483), "powerup1.png")
+    else:
+        lightning_power = Power((224, 483), "poweruplocked.png")
+
+    lightning_text = Text("(1)", "kenvector_future_thin", 8)
+    lightning_text.rect.midtop = (224, 520)
+
+    add_sprite_to_groups(lightning_power, all_sprites, power_sprites)
+    add_sprite_to_groups(lightning_text, all_sprites, text_sprites, power_up_text_sprites)
+
+    if player.acceleration_speed < 0.8:
+        speed_power = Power((300, 483), "powerup2.png")
+    else:
+        speed_power = Power((300, 483), "poweruplocked.png")
+
+    speed_text = Text("(2)", "kenvector_future_thin", 8)
+    speed_text.rect.midtop = (300, 520)
+
+    add_sprite_to_groups(speed_power, all_sprites, power_sprites)
+    add_sprite_to_groups(speed_text, all_sprites, text_sprites, power_up_text_sprites)
+
+    health_power = Power((376, 483), "powerup3.png")
+
+    health_text = Text("(3)", "kenvector_future_thin", 8)
+    health_text.rect.midtop = (376, 520)
+
+    add_sprite_to_groups(health_power, all_sprites, power_sprites)
+    add_sprite_to_groups(health_text, all_sprites, text_sprites, power_up_text_sprites)
+
+
+def remove_powers(
+            power_sprites: pygame.sprite.Group,
+            power_up_text_sprites: pygame.sprite.Group,
+            all_sprites: pygame.sprite.LayeredUpdates,
+            text_sprites: pygame.sprite.Group
+) -> None:
+    """Removes all sprites in the power sprites group and the power up text sprites group from their groups.
+
+    Args:
+        power_sprites (pygame.sprite.Group): The power sprites group.
+        power_up_text_sprites (pygame.sprite.Group): The power up text sprites group.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+    """
+    for power in power_sprites.sprites():
+        remove_sprite_from_groups(power, all_sprites, power_sprites)
+
+    for text in power_up_text_sprites.sprites():
+        remove_sprite_from_groups(text, all_sprites, text_sprites, power_up_text_sprites)
+
+
+def reset_game_results() -> None:
+    """Resets the game_results.txt file."""
+    with open("survoids/game_results.txt", "w") as game_results:
+        game_results.write("This is the text file where game data is saved.\n\n")
+
+
+def store_game_info(score: int, level: int, wave: int) -> None:
+    """Stores the game info in the game_results.txt file.
+
+    Args:
+        score (int): The score number.
+        level (int): The level number of the player.
+        wave (int): The wave number.
+    """
+    time_elapsed:float = pygame.time.get_ticks() / 1000
+
+    with open("survoids/game_results.txt", "a") as game_results:
+        game_results.write(f"Score: {score}\n")
+        game_results.write(f"Wave: {wave}\n")
+        game_results.write(f"Level: {level}\n")
+        game_results.write(f"Time elapsed: {time_elapsed:.2f}s\n\n")
+
+
+def display_end_screen(
+            end_screen: ScreenEffect,
+            game_over_text: Text,
+            all_sprites: pygame.sprite.LayeredUpdates,
+            screen_effect_sprites: pygame.sprite.Group,
+            text_sprites: pygame.sprite.Group
+) -> None:
+    """Displays the end screen objects.
+
+    Args:
+        end_screen (ScreenEffect): The end screen grey screen effect object.
+        game_over_text (Text): The game over text object.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        screen_effect_sprites (pygame.sprite.Group): The screen effect sprites group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+    """
+    add_sprite_to_groups(end_screen, all_sprites, screen_effect_sprites)
+
+    add_sprite_to_groups(game_over_text, all_sprites, text_sprites)
 
 
 ## Main
 
 def main():
+    ## Initialisation
+
+    pygame.init()
+
+
+    ## Initial pygame objects and func calling
+    clock = pygame.time.Clock()
+
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Survoids")
+
+    pygame.mouse.set_visible(False)
+
+    ## Variables
+    previous_game_state = "main_screen"
+    game_state = "main_screen"
+
+    score = 0
+
+    wave_value = 10
+    wave = 0
+    wave_delay = 0
+
+    ## Groups
+
+    all_sprites = pygame.sprite.LayeredUpdates()
+
+    player_bullet_sprites = pygame.sprite.Group()
+    enemy_sprites = pygame.sprite.Group()
+    enemy_bullet_sprites = pygame.sprite.Group()
+    hitmarker_sprites = pygame.sprite.Group()
+
+    power_sprites = pygame.sprite.Group()
+    user_interface_sprites = pygame.sprite.Group()
+
+    text_sprites = pygame.sprite.Group()
+
+    main_screen_sprites = pygame.sprite.Group()
+    pause_screen_sprites = pygame.sprite.Group()
+
+    wave_clear_sprites = pygame.sprite.Group()
+    power_up_text_sprites = pygame.sprite.Group()
+
+    screen_effect_sprites = pygame.sprite.Group()
+
+
+    ## Objects
+
+    background = Background()
+
+    mouse = Mouse()
+
+    title_text = Text("Survoids", "kenvector_future", 80)
+    title_text.rect.midtop = (300, 40)
+
+    play_text = Text("PLAY", "kenvector_future", 60)
+    play_text.rect.midtop = (300, 260)
+
+    play_text_effect_1 = Text("PLAY", "kenvector_future", 60, (0, 0, 0))
+    play_text_effect_1.rect.midtop = (298, 258)
+
+    play_text_effect_2 = Text("PLAY", "kenvector_future", 60, (0, 0, 0))
+    play_text_effect_2.rect.midtop = (301, 261)
+
+    play_button = UserInterface("button.png", 240, 78, (293, 295), True)
+
+    player = Player()
+
+    thruster = Thruster()
+
+    x_ui = UserInterface("x.png", 17, 17, (52, 21))
+
+    player_life_icon = UserInterface("life_ui.png", 33, 26, (21, 20))
+
+    lives_text = Text(str(player.lives), "kenvector_future", 24)
+    lives_text.rect.topleft = (68, 8)
+
+    score_text = Text(str(score), "kenvector_future_thin", 36)
+    score_text.rect.topright = (596, 8)
+
+    pause_screen = ScreenEffect((0, 0, 20), 60)
+
+    pause_text = Text("PAUSED", "kenvector_future", 120)
+    pause_text.rect.midtop = (300, 240)
+
+    end_screen = ScreenEffect((0, 0, 10), 60)
+
+    game_over_text = Text("GAME OVER", "kenvector_future", 75)
+    game_over_text.rect.center = (300, 200)
+
+
+    ## Running
+
     while True:
         clock.tick(FPS)
+
+        ## Events
 
         for event in pygame.event.get():
             if event.type == QUIT:
@@ -849,56 +1380,60 @@ def main():
                 sys.exit()
 
             if event.type == START_GAME:
-                remove_main_screen()
-                display_player()
-                display_ui()
-                update_game_state("in_game")
+                remove_main_screen(main_screen_sprites, all_sprites, text_sprites, user_interface_sprites)
+                display_player(player, thruster, all_sprites)
+                display_user_interface(x_ui, player_life_icon, lives_text, score_text, all_sprites, user_interface_sprites, text_sprites)
+                game_state, previous_game_state = update_game_state(game_state, previous_game_state, "in_game")
 
             if event.type == IMMUNE_OFF:
-                player.image = player.immune_image
-                player.original_image = player.normal_image
+                player.image = player.IMMUNE_IMAGE
+                player.original_image = player.NORMAL_IMAGE
+                player.set_vulnerable()
 
-                player.immune = False
-            
             if event.type == ENEMY_HIT:
                 enemy_pos = event.enemy.get_pos()
                 hitmarker = Hitmarker(enemy_pos)
-                all_sprites.add(hitmarker)
-                hitmarker_sprites.add(hitmarker)
-                enemy_sprites.remove(event.enemy)
-                player_bullet_sprites.remove(event.bullet)
-                all_sprites.remove(event.enemy)
-                all_sprites.remove(event.bullet)
-                update_stats(player)
-                update_text(player.lives)
+                add_sprite_to_groups(hitmarker, all_sprites, hitmarker_sprites)
+                remove_sprite_from_groups(event.enemy, all_sprites, enemy_sprites)
+                remove_sprite_from_groups(event.bullet, all_sprites, player_bullet_sprites)
+                event.enemy.kill()
+                event.bullet.kill()
+                score = update_stats(player, score)
+                update_text(player.lives, score, lives_text, score_text)
 
             if event.type == PLAYER_HIT:
                 if not player.immune:
                     player.lives -= 1
-                    update_text(player.lives)
+                    update_text(player.lives, score, lives_text, score_text)
 
                     if check_game_over(player.lives):
                         pygame.event.post(pygame.event.Event(GAME_OVER))
                         player.immune = True
                         # player death animation goes here
                     else:
-                        player.image = player.immune_image
-                        player.original_image = player.immune_image
+                        player.image = player.IMMUNE_IMAGE
+                        player.original_image = player.IMMUNE_IMAGE
 
                         player.immune = True
-                        pygame.time.set_timer(pygame.event.Event(IMMUNE_OFF), 2000)
+
+            if event.type == LEVEL_UP:
+                if not power_sprites:
+                    display_powers(player, all_sprites, power_sprites, text_sprites, power_up_text_sprites)
+
+            if event.type == LEVEL_UP_COMPLETE:
+                remove_powers(power_sprites, power_up_text_sprites, all_sprites, text_sprites)
 
             if event.type == GAME_OVER:
-                update_game_state("game_over")
+                game_state, previous_game_state = update_game_state(game_state, previous_game_state, "game_over")
                 store_game_info(score, player.level, wave)
-                display_end_screen()
-            
+                display_end_screen(end_screen, game_over_text, all_sprites, screen_effect_sprites, text_sprites)
+
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     if game_state == "main_screen":
                         if check_mouse_click(play_button):
                             play_button.change_clicked(True)
-            
+
             if event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
                     if game_state == "main_screen":
@@ -908,14 +1443,13 @@ def main():
                         else:
                             play_button.change_clicked(False)
 
-
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     if game_state == "paused":
-                        update_game_state(previous_game_state)
-                        remove_pause_screen()
+                        game_state, previous_game_state = update_game_state(game_state, previous_game_state, previous_game_state)
+                        remove_pause_screen(pause_screen_sprites, all_sprites, screen_effect_sprites, text_sprites)
                     elif game_state == "in_game":
-                        update_game_state("paused")
+                        game_state, previous_game_state = update_game_state(game_state, previous_game_state, "paused")
                 # test keybinds
                 if event.key == pygame.K_6:
                     print("game_state:", game_state)
@@ -932,38 +1466,61 @@ def main():
                     print(player.level)
                 if event.key == pygame.K_o:
                     print(player.angle)
-        
-        screen.fill((0,0,0))
+
+        ## Main game functions
 
         match game_state:
             case "main_screen":
                 if background not in all_sprites and mouse not in all_sprites:
-                    display_background()
-                    display_mouse()
-                
+                    display_background(background, all_sprites)
+                    display_mouse(mouse, all_sprites)
+
                 if not main_screen_sprites:
-                    display_main_screen()
+                    display_main_screen(title_text, play_text_effect_1, play_text, play_text_effect_2, play_button, all_sprites, text_sprites, user_interface_sprites, main_screen_sprites)
                 # display main screen with a play button for now can add other stuff later
             case "paused":
                 if not pause_screen_sprites:
-                    display_pause_screen()
+                    display_pause_screen(pause_screen, pause_text, all_sprites, screen_effect_sprites, text_sprites, pause_screen_sprites)
+
+                thruster.change_visibility(False)
+
+                rotate_object(player)
             case "in_game":
                 point_object_to_object(player, mouse)
-            
-                adjust_thruster(thruster, player)
 
-                fire_bullet(player)
-                
-                spawn_waves()
+                fire_bullet(player, all_sprites, player_bullet_sprites)
+
+                wave_value, wave, wave_delay = spawn_waves(all_sprites, enemy_sprites, text_sprites, wave_clear_sprites, wave, wave_value, wave_delay)
 
                 if pygame.sprite.spritecollideany(player, enemy_sprites, pygame.sprite.collide_rect_ratio(0.8)):
                     pygame.event.post(pygame.event.Event(PLAYER_HIT))
-                
+
                 if pygame.sprite.spritecollideany(player, enemy_bullet_sprites, pygame.sprite.collide_rect_ratio(0.6)):
                     pygame.event.post(pygame.event.Event(PLAYER_HIT))
+
+                player.move()
+                player.calc_movement()
+
+                adjust_thruster(thruster, player)
+
+                if player.immune:
+                    player.check_immunity()
+
+                thruster.update_visibility()
+
+                for enemy in enemy_sprites:
+                    enemy.move()
+
+                for bullet in enemy_bullet_sprites.sprites() + player_bullet_sprites.sprites():
+                    bullet.move()
             case "game_over":
-                pass
-            
+                rotate_object(player)
+
+                thruster.change_visibility(False)
+
+                for bullet in enemy_bullet_sprites.sprites() + player_bullet_sprites.sprites():
+                    bullet.move()
+
         for enemy in enemy_sprites:
             point_object_to_object(enemy, player)
 
@@ -971,20 +1528,29 @@ def main():
 
             if bullet_collision:
                 pygame.event.post(pygame.event.Event(ENEMY_HIT, {"enemy": enemy, "bullet": bullet_collision}))
-        
-        for hitmarker in hitmarker_sprites:
-            if hitmarker.time >= 30:
-                hitmarker_sprites.remove(hitmarker)
-                all_sprites.remove(hitmarker)
+
+        for hitmarker in hitmarker_sprites.sprites():
+            hitmarker.update_time()
+            if hitmarker.check_timeout():
+                remove_sprite_from_groups(hitmarker, all_sprites, hitmarker_sprites)
+                hitmarker.kill()
+
+
+        ## Updating objects
+
+        all_sprites.update()
+
+
+        ## Drawing objects
+
+        screen.fill((0,0,0))
 
         for entity in all_sprites:
             if isinstance(entity, Text) or isinstance(entity, ScreenEffect):
                 screen.blit(entity.surf, entity.rect)
-            elif entity != thruster:
-                screen.blit(entity.image, entity.rect)
-                entity.update()
             else:
-                entity.update()
+                if not(isinstance(entity, Thruster) and entity.visibility == False):
+                    screen.blit(entity.image, entity.rect)
 
         pygame.display.flip()
 
