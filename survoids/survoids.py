@@ -106,12 +106,15 @@ class Player(pygame.sprite.Sprite):
     """The player spaceship class.
 
     Attributes:
+        scaled_size (tuple[int, int]): The scaled size of the player object.
         image (surf): The player.png image scaled to half the size.
         NORMAL_IMAGE (surf): The normal player.png used to revert the player once i-frames disappear.
         IMMUNE_IMAGE (surf): The player_immune.png used when the player has i-frames.
         original_image (surf): Used as a placeholder for scaling and rotating the player image.
         surf (surf): The surface of the player.
         rect (rect): The rect of the player.
+        x (float): The unrounded x coordinate of the player.
+        y (float): The unrounded y coordinate of the player.
         angle (float): The angle of the player.
         acceleration_up (float): The current upwards acceleration of the player.
         acceleration_down (float): The current downwards acceleration of the player.
@@ -140,15 +143,19 @@ class Player(pygame.sprite.Sprite):
         """Initialises the player object."""
         super().__init__(*groups)
         self._layer = 5
+
+        self.scaled_size = (45, 37)
         unscaled_image = pygame.image.load('survoids/images/player.png').convert_alpha()
         unscaled_IMMUNE_IMAGE = pygame.image.load('survoids/images/player_immune.png').convert_alpha()
-        self.image = pygame.transform.scale(unscaled_image, (45, 37))
-        self.NORMAL_IMAGE = pygame.transform.scale(unscaled_image, (45, 37))
-        self.IMMUNE_IMAGE = pygame.transform.scale(unscaled_IMMUNE_IMAGE, (45, 37))
+        self.image = pygame.transform.scale(unscaled_image, self.scaled_size)
+        self.NORMAL_IMAGE = pygame.transform.scale(unscaled_image, self.scaled_size)
+        self.IMMUNE_IMAGE = pygame.transform.scale(unscaled_IMMUNE_IMAGE, self.scaled_size)
         self.original_image = self.NORMAL_IMAGE
 
-        self.surf = pygame.Surface((45,37))
-        self.rect = self.surf.get_rect(center = (WIDTH/2, HEIGHT/2))
+        self.surf = pygame.Surface(self.scaled_size)
+        self.rect = self.surf.get_rect(center = (WIDTH / 2, HEIGHT / 2))
+        self.x = WIDTH / 2
+        self.y = HEIGHT / 2
         self.angle = 90.0
 
         self.acceleration_up = 0.0
@@ -171,8 +178,8 @@ class Player(pygame.sprite.Sprite):
 
         self.experience = 0
 
-        self.level = 0
-        self.levels_used = 0
+        self.level = 1
+        self.levels_used = 1
         self.LEVEL_UP_THRESHOLD = 40
         self.LEVEL_HOLDOFF = 10
         self.level_delay = 0
@@ -188,15 +195,15 @@ class Player(pygame.sprite.Sprite):
         """
         return self.angle
 
-    def get_pos(self) -> tuple[int, int]:
+    def get_pos(self) -> tuple[float, float]:
         """Returns the position of the player.
 
         Returns:
-            tuple[int, int]: The x and y coordinates of the player.
+            tuple[float, float]: The unrounded x and y coordinates of the player.
         """
-        x = self.rect.centerx
-        y = self.rect.centery
-        return (x,y)
+        x = self.x
+        y = self.y
+        return (x, y)
 
     def set_vulnerable(self) -> None:
         """Sets the immune state of the player to False."""
@@ -245,13 +252,8 @@ class Player(pygame.sprite.Sprite):
             self.acceleration_right -= self.deceleration_speed
 
         # Calculate movement
-        acceleration_up_rounded = round(self.acceleration_up)
-        acceleration_down_rounded = round(self.acceleration_down)
-        acceleration_right_rounded = round(self.acceleration_right)
-        acceleration_left_rounded = round(self.acceleration_left)
-
-        self.rect.y = self.rect.y - acceleration_up_rounded + acceleration_down_rounded
-        self.rect.x = self.rect.x - acceleration_left_rounded + acceleration_right_rounded
+        self.x += self.acceleration_right - self.acceleration_left
+        self.y += self.acceleration_down - self.acceleration_up
 
     def update(self):
         """Updates the player's level, powers and keeps the object on screen."""
@@ -288,18 +290,22 @@ class Player(pygame.sprite.Sprite):
                 self.level_delay -= 1
 
         # Keep player on-screen
-        if self.rect.x > WIDTH - 45:
-            self.rect.x = WIDTH - 45
+        if self.x + self.scaled_size[0] / 2 > WIDTH:
+            self.x = WIDTH - self.scaled_size[0] / 2
             self.acceleration_right = 0.0
-        if self.rect.x < 0:
-            self.rect.x = 0
+        if self.x - self.scaled_size[0] / 2 < 0:
+            self.x = self.scaled_size[0] / 2
             self.acceleration_left = 0.0
-        if self.rect.y > HEIGHT - 37:
-            self.rect.y = HEIGHT - 37
+        if self.y + self.scaled_size[1] / 2 > HEIGHT:
+            self.y = HEIGHT - self.scaled_size[1] / 2
             self.acceleration_down = 0.0
-        if self.rect.y < 0:
-            self.rect.y = 0
+        if self.y - self.scaled_size[1] / 2 < 0:
+            self.y = self.scaled_size[1] / 2
             self.acceleration_up = 0.0
+
+        # Round x and y values to position on screen correctly
+        self.rect.centerx = round(self.x)
+        self.rect.centery = round(self.y)
 
 
 class Thruster(pygame.sprite.Sprite):
@@ -326,15 +332,6 @@ class Thruster(pygame.sprite.Sprite):
         self.angle = 90.0
         self.visibility = False
 
-    def change_visibility(self, new_visibility: bool) -> None:
-        """Changes the visibility of the thruster object if it is different to the new visibility value.
-
-        Args:
-            new_visibility (bool): The new visibility value of the thruster object.
-        """
-        if self.visibility != new_visibility:
-            self.visibility = new_visibility
-
     def update_visibility(self) -> None:
         """Updates the thruster's visibility."""
         keyboard = pygame.key.get_pressed()
@@ -356,15 +353,17 @@ class Bullet(pygame.sprite.Sprite):
         original_image (surf): Used as a placeholder for scaling and rotating the bullet image in the angle of the object that fires it.
         surf (surf): The surface for the bullet.
         rect (rect): The rect of the bullet.
+        x (float): The unrounded x coordinate of the bullet.
+        y (float): The unrounded y coordinate of the bullet.
         angle (float): The angle of the bullet.
         SPEED (int): The speed of the bullet.
     """
-    def __init__(self, angle:float, pos:tuple, img:str, size:tuple, speed:int):
+    def __init__(self, angle: float, pos: tuple[float, float], img: str, size: tuple, speed: int):
         """Initialises the bullet object.
 
         Args:
             angle (float): The angle of the object that fires it.
-            pos (tuple): The position of the object that fires it.
+            pos (tuple[float, float]): The position of the object that fires it.
             img (str): The image of the bullet.
             size (tuple): The size the bullet should be scaled to.
             speed (int): The speed of the bullet.
@@ -376,7 +375,9 @@ class Bullet(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(unscaled_image, size)
         self.original_image = pygame.transform.scale(unscaled_image, size)
         self.surf = pygame.Surface(size)
-        self.rect = self.surf.get_rect(center = pos)
+        self.rect = self.surf.get_rect(center = tuple(map(lambda x: round(x), pos)))
+        self.x = pos[0]
+        self.y = pos[1]
 
         self.angle = angle
         self.image = pygame.transform.rotate(self.original_image, self.angle)
@@ -387,11 +388,14 @@ class Bullet(pygame.sprite.Sprite):
     def move(self) -> None:
         """Updates the bullet object's position, killing it if it exits the screen."""
         angle = -math.radians(self.angle)
-        self.rect.centerx = self.rect.centerx + round(self.SPEED * math.sin(angle))
-        self.rect.centery = self.rect.centery - round(self.SPEED * math.cos(angle))
+        self.x += self.SPEED * math.sin(angle)
+        self.y -= self.SPEED * math.cos(angle)
 
-        if self.rect.centerx > 620 or self.rect.centerx < -20 or self.rect.centery > 620 or self.rect.centery < -20:
+        if self.x > 620 or self.x < -20 or self.y > 620 or self.y < -20:
             self.kill()
+
+        self.rect.centerx = round(self.x)
+        self.rect.centery = round(self.y)
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -400,6 +404,8 @@ class Enemy(pygame.sprite.Sprite):
     Attributes:
         value (int): The value of the Enemy class.
         likelihood (int): The likelihood that the Enemy class appears.
+        SPAWN_RADIUS (int): The minimum distance from the centre of the screen that the enemy should spawn from.
+        RAND_RANGE (int): The maximum range from the centre of the screen that the enemy should spawn from.
         image (surf): The image of the enemy scaled and rotated correctly.
         original_image (surf): Used as a placeholder for scaling and rotating the enemy image.
         surf (surf): The surface for the enemy.
@@ -407,10 +413,13 @@ class Enemy(pygame.sprite.Sprite):
         SPEED (int): The speed of the enemy.
         angle (float): The angle of the enemy, first used to calculate its spawn location.
         radians (float): The angle of the enemy in degrees and flipped.
-        SPAWN_RADIUS (int): The average distance from the centre of the screen that the enemy should spawn from.
+        x (float): The unrounded x coordinate of the enemy.
+        y (float): The unrounded y coordinate of the enemy.
     """
-    value:int = 0
-    likelihood:int = 0
+    value: int = 0
+    likelihood: int = 0
+    SPAWN_RADIUS: int = 450
+    RAND_RANGE: int = 600
 
     def __init__(self, img: str = "enemy_a.png", size: tuple = (26, 21), speed: int | float = 2):
         """Initialises the enemy object.
@@ -433,9 +442,11 @@ class Enemy(pygame.sprite.Sprite):
 
         self.angle = rand.randint(0,360)
         self.radians = -math.radians(self.angle)
-        self.SPAWN_RADIUS = 500
-        self.rect.centerx = 300 + round((self.SPAWN_RADIUS + rand.randint(0,550)) * math.sin(self.radians))
-        self.rect.centery = 300 + round((self.SPAWN_RADIUS + rand.randint(0,550)) * math.cos(self.radians))
+
+        self.x = WIDTH / 2 + rand.randint(Enemy.SPAWN_RADIUS, Enemy.RAND_RANGE) * math.sin(self.radians)
+        self.y = HEIGHT / 2 + rand.randint(Enemy.SPAWN_RADIUS, Enemy.RAND_RANGE) * math.cos(self.radians)
+        self.rect.centerx = round(self.x)
+        self.rect.centery = round(self.y)
 
     def get_angle(self) -> float:
         """Returns the angle of the enemy.
@@ -445,21 +456,27 @@ class Enemy(pygame.sprite.Sprite):
         """
         return self.angle
 
-    def get_pos(self) -> tuple:
+    def get_pos(self) -> tuple[float, float]:
         """Returns the position of the enemy.
 
         Returns:
-            tuple: The x and y coordinates of the enemy.
+            tuple: The unrounded x and y coordinates of the enemy.
         """
-        x = self.rect.centerx
-        y = self.rect.centery
-        return (x,y)
+        x = self.x
+        y = self.y
+        return (x, y)
+
+    def fire(self, *sprite_groups) -> None:
+        """Placeholder for enemy types to fire bullets that should be overridden."""
+        pass
 
     def move(self) -> None:
         """Moves the enemy towards the player."""
         self.radians = -math.radians(self.angle)
-        self.rect.centerx = self.rect.centerx + round(self.SPEED * math.sin(self.radians))
-        self.rect.centery = self.rect.centery - round(self.SPEED * math.cos(self.radians))
+        self.x += self.SPEED * math.sin(self.radians)
+        self.y -= self.SPEED * math.cos(self.radians)
+        self.rect.centerx = round(self.x)
+        self.rect.centery = round(self.y)
 
 
 class EnemyA(Enemy):
@@ -521,18 +538,18 @@ class Hitmarker(pygame.sprite.Sprite):
         time (int): The number of frames the hitmarker has been on screen.
         TIMEOUT (int): The number of frames before the hitmarker times out.
     """
-    def __init__(self, pos:tuple[int, int]):
+    def __init__(self, pos:tuple[float, float]):
         """Initialises the hitmarker object.
 
         Args:
-            pos (tuple[int, int]): The position of the enemy the bullet struck for the hitmarker to appear at.
+            pos (tuple[float, float]): The position of the enemy the bullet struck for the hitmarker to appear at.
         """
         super().__init__()
         self._layer = 3
 
         self.image = pygame.image.load(f'survoids/images/hit_marker.png').convert_alpha()
         self.surf = pygame.Surface((37,37))
-        self.rect = self.surf.get_rect(center = pos)
+        self.rect = self.surf.get_rect(center = tuple(map(lambda x: round(x), pos)))
 
         self.time = 0
         self.TIMEOUT = 31       # 31 instead of 30 as update_time() is called immediately after initialisation of an object and before checking timeout
@@ -560,7 +577,7 @@ class Power(pygame.sprite.Sprite):
         surf (surf): The surface of the power up.
         rect (rect): The rect of the power up.
     """
-    def __init__(self, pos:tuple[int, int], image:str):
+    def __init__(self, pos: tuple[int, int], image: str):
         """Initialisation of the power up object.
 
         Args:
@@ -629,7 +646,7 @@ class Text(pygame.sprite.Sprite):
         surf (surf): The surface of the text object.
         rect (rect): The rect of the text object.
     """
-    def __init__(self, initial: str, font_name: str, font_size: int, pos_type:str, pos:tuple[int, int], colour: tuple[int, int, int] = (255, 255, 255)):
+    def __init__(self, initial: str, font_name: str, font_size: int, pos_type: str, pos:tuple[int, int], colour: tuple[int, int, int] = (255, 255, 255)):
         """Initialises the text object.
 
         Args:
@@ -649,7 +666,7 @@ class Text(pygame.sprite.Sprite):
         self.colour = colour
 
         self.font = pygame.font.Font(f'survoids/fonts/{font_name}.ttf', font_size)
-        self.surf = self.font.render(initial, True, self.colour)
+        self.surf = self.font.render(self.words, True, self.colour)
         self.rect = self.surf.get_rect()
 
         self.set_position()
@@ -673,7 +690,7 @@ class Text(pygame.sprite.Sprite):
             new_words (str): The new words for the text object.
         """
         self.words = new_words
-        self.surf = self.font.render(new_words, True, self.colour)
+        self.surf = self.font.render(self.words, True, self.colour)
         self.rect = self.surf.get_rect()
         self.set_position()
 
@@ -911,7 +928,7 @@ def spawn_waves(
             wave_num_text: Text,
             enemy_num_text: Text,
             wave: int,
-            wave_value:int,
+            wave_value: int,
             wave_delay: int
 ) -> tuple[int, int, int]:
     """Spawns waves of enemies if the previous wave has ended and wave delay is 0 or less.
@@ -1170,7 +1187,7 @@ def update_stats(player: Player, score: int) -> int:
     return score + 20
 
 
-def update_game_state(game_state: str, previous_game_state: str, new_state:str) -> tuple[str, str]:
+def update_game_state(game_state: str, previous_game_state: str, new_state: str) -> tuple[str, str]:
     """Updates the game's state.
 
     Args:
@@ -1282,29 +1299,6 @@ def remove_powers(
         text.kill()
 
 
-def reset_game_results() -> None:
-    """Resets the game_results.txt file."""
-    with open("survoids/game_results.txt", "w") as game_results:
-        game_results.write("This is the text file where game data is saved.\n\n")
-
-
-def store_game_info(score: int, level: int, wave: int) -> None:
-    """Stores the game info in the game_results.txt file.
-
-    Args:
-        score (int): The score number.
-        level (int): The level number of the player.
-        wave (int): The wave number.
-    """
-    time_elapsed:float = pygame.time.get_ticks() / 1000
-
-    with open("survoids/game_results.txt", "a") as game_results:
-        game_results.write(f"Score: {score}\n")
-        game_results.write(f"Wave: {wave}\n")
-        game_results.write(f"Level: {level}\n")
-        game_results.write(f"Time elapsed: {time_elapsed:.2f}s\n\n")
-
-
 def display_end_screen(
             end_screen: ScreenEffect,
             game_over_text: Text,
@@ -1324,6 +1318,29 @@ def display_end_screen(
     add_sprite_to_groups(end_screen, all_sprites, screen_effect_sprites)
 
     add_sprite_to_groups(game_over_text, all_sprites, text_sprites)
+
+
+def reset_game_results() -> None:
+    """Resets the game_results.txt file."""
+    with open("survoids/game_results.txt", "w") as game_results:
+        game_results.write("This is the text file where game data is saved.\n\n")
+
+
+def store_game_info(score: int, level: int, wave: int, time_elapsed: float) -> None:
+    """Stores the game info in the game_results.txt file.
+
+    Args:
+        score (int): The score number.
+        level (int): The level number of the player.
+        wave (int): The wave number.
+        time_elapsed (float): The number of ticks elapsed in game.
+    """
+
+    with open("survoids/game_results.txt", "a") as game_results:
+        game_results.write(f"Score: {score}\n")
+        game_results.write(f"Wave: {wave}\n")
+        game_results.write(f"Level: {level}\n")
+        game_results.write(f"Time elapsed: {time_elapsed:.2f}s\n\n")
 
 
 ## Main
@@ -1351,6 +1368,9 @@ def main():
     wave_value = 10
     wave = 0
     wave_delay = 0
+
+    time_elapsed = 0
+    paused_time = 0
 
     ## Groups
 
@@ -1438,6 +1458,7 @@ def main():
                 display_player(player, thruster, all_sprites)
                 display_user_interface(player_x_ui, player_life_icon, wave_num_text, enemy_icon, enemy_x_ui, enemy_num_text, lives_text, score_text, all_sprites, user_interface_sprites, wave_info_sprites, text_sprites)
                 game_state, previous_game_state = update_game_state(game_state, previous_game_state, "in_game")
+                start_game_time = pygame.time.get_ticks() / 1000
 
             if event.type == IMMUNE_OFF:
                 player.image = player.IMMUNE_IMAGE
@@ -1459,12 +1480,11 @@ def main():
             if event.type == PLAYER_HIT:
                 if not player.immune:
                     player.lives -= 1
-                    score_text.update_words(str(player.lives))
+                    lives_text.update_words(str(player.lives))
 
                     if check_game_over(player.lives):
                         pygame.event.post(pygame.event.Event(GAME_OVER))
                         player.immune = True
-                        # player death animation goes here
                     else:
                         player.image = player.IMMUNE_IMAGE
                         player.original_image = player.IMMUNE_IMAGE
@@ -1480,7 +1500,8 @@ def main():
 
             if event.type == GAME_OVER:
                 game_state, previous_game_state = update_game_state(game_state, previous_game_state, "game_over")
-                store_game_info(score, player.level, wave)
+                time_elapsed = pygame.time.get_ticks() / 1000 - start_game_time - paused_time
+                store_game_info(score, player.level, wave, time_elapsed)
                 display_end_screen(end_screen, game_over_text, all_sprites, screen_effect_sprites, text_sprites)
 
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -1503,8 +1524,10 @@ def main():
                     if game_state == "paused":
                         game_state, previous_game_state = update_game_state(game_state, previous_game_state, previous_game_state)
                         remove_pause_screen(pause_screen_sprites, all_sprites, screen_effect_sprites, text_sprites)
+                        paused_time += pygame.time.get_ticks() / 1000 - start_pause_time
                     elif game_state == "in_game":
                         game_state, previous_game_state = update_game_state(game_state, previous_game_state, "paused")
+                        start_pause_time = pygame.time.get_ticks() / 1000
                 # test keybinds
                 if event.key == pygame.K_6:
                     print("game_state:", game_state)
@@ -1537,7 +1560,8 @@ def main():
                 if not pause_screen_sprites:
                     display_pause_screen(pause_screen, pause_text, all_sprites, screen_effect_sprites, text_sprites, pause_screen_sprites)
 
-                thruster.change_visibility(False)
+                if thruster.visibility != False:
+                    thruster.visibility = False
 
                 rotate_object(player)
             case "in_game":
@@ -1556,8 +1580,6 @@ def main():
                 player.move()
                 player.calc_movement()
 
-                adjust_thruster(thruster, player)
-
                 if player.immune:
                     player.check_immunity()
 
@@ -1565,13 +1587,19 @@ def main():
 
                 for enemy in enemy_sprites:
                     enemy.move()
+                    enemy.fire(all_sprites, enemy_bullet_sprites)
 
                 for bullet in enemy_bullet_sprites.sprites() + player_bullet_sprites.sprites():
                     bullet.move()
             case "game_over":
                 rotate_object(player)
 
-                thruster.change_visibility(False)
+                if thruster.visibility != False:
+                    thruster.visibility = False
+
+                for enemy in enemy_sprites:
+                    enemy.move()
+                    enemy.fire(all_sprites, enemy_bullet_sprites)
 
                 for bullet in enemy_bullet_sprites.sprites() + player_bullet_sprites.sprites():
                     bullet.move()
@@ -1594,6 +1622,8 @@ def main():
         ## Updating objects
 
         all_sprites.update()
+
+        adjust_thruster(thruster, player)
 
 
         ## Drawing objects
