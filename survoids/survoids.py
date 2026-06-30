@@ -34,6 +34,8 @@ WAVE_HOLDOFF = 120
 
 START_GAME = pygame.event.custom_type()
 
+PLAY_AGAIN = pygame.event.custom_type()
+
 GAME_OVER = pygame.event.custom_type()
 
 PLAYER_HIT = pygame.event.custom_type()
@@ -1427,21 +1429,27 @@ def remove_powers(
 def display_end_screen(
             end_screen: ScreenEffect,
             game_over_text: Text,
+            play_again_button: UserInterface,
+            play_again_text_effect_1: Text,
+            play_again_text: Text,
+            play_again_text_effect_2: Text,
             all_sprites: pygame.sprite.LayeredUpdates,
             screen_effect_sprites: pygame.sprite.Group,
-            text_sprites: pygame.sprite.Group
+            text_sprites: pygame.sprite.Group,
+            user_interface_sprites: pygame.sprite.Group
 ) -> None:
     """Displays the end screen objects.
 
     Args:
         end_screen (ScreenEffect): The end screen grey screen effect object.
         game_over_text (Text): The game over text object.
+        play_again_button (UserInterface): The play again button.
         all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
         screen_effect_sprites (pygame.sprite.Group): The screen effect sprites group.
         text_sprites (pygame.sprite.Group): The text sprites group.
     """
     add_sprite_to_groups(end_screen, all_sprites, screen_effect_sprites)
-
+    # start here
     add_sprite_to_groups(game_over_text, all_sprites, text_sprites)
 
 
@@ -1569,6 +1577,15 @@ def main():
 
     game_over_text = Text("GAME OVER", "kenvector_future", 75, "center", (300, 200))
 
+    play_again_button = UserInterface("button.png", 240, 78, (293, 395), True)
+
+    play_again_text = Text("PLAY", "kenvector_future", 60, "midtop", (300, 260))
+
+    play_again_text_effect_1 = Text("PLAY", "kenvector_future", 60, "midtop", (298, 258), (0, 0, 0))
+
+    play_again_text_effect_2 = Text("PLAY", "kenvector_future", 60, "midtop", (301, 261), (0, 0, 0))
+
+
 
     ## Running
 
@@ -1588,6 +1605,25 @@ def main():
                 display_user_interface(player_x_ui, player_life_icon, wave_num_text, wave_bar, enemy_icon, enemy_x_ui, enemy_num_text, lives_text, score_text, all_sprites, user_interface_sprites, wave_info_sprites, text_sprites, volume_meter_sprites)
                 game_state, previous_game_state = update_game_state(game_state, previous_game_state, "in_game")
                 start_game_time = pygame.time.get_ticks() / 1000
+
+            if event.type == PLAY_AGAIN:
+                score = 0
+
+                wave_value = 10
+                wave = 0
+                wave_delay = 0
+
+                time_elapsed = 0
+                paused_time = 0
+
+                player.x = 300.0
+                player.y = 300.0
+
+                enemy_sprites.empty()
+
+                score_text.update_words(str(score))
+                enemy_num_text.update_words(str(len(enemy_sprites)))
+                wave_num_text.update_words(str(wave))
 
             if event.type == IMMUNE_OFF:
                 player.image = player.IMMUNE_IMAGE
