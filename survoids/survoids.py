@@ -1444,13 +1444,25 @@ def display_end_screen(
         end_screen (ScreenEffect): The end screen grey screen effect object.
         game_over_text (Text): The game over text object.
         play_again_button (UserInterface): The play again button.
+        play_again_text_effect_1 (Text): The first text effect shadow on the play again text.
+        play_again_text (Text): The play again text.
+        play_again_text_effect_2 (Text): The second text effect shadow on the play again text.
         all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
         screen_effect_sprites (pygame.sprite.Group): The screen effect sprites group.
         text_sprites (pygame.sprite.Group): The text sprites group.
+        user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
     """
     add_sprite_to_groups(end_screen, all_sprites, screen_effect_sprites)
-    # start here
+
     add_sprite_to_groups(game_over_text, all_sprites, text_sprites)
+
+    add_sprite_to_groups(play_again_button, all_sprites, user_interface_sprites)
+
+    add_sprite_to_groups(play_again_text_effect_1, all_sprites, text_sprites)
+
+    add_sprite_to_groups(play_again_text, all_sprites, text_sprites)
+
+    add_sprite_to_groups(play_again_text_effect_2, all_sprites, text_sprites)
 
 
 def reset_game_results() -> None:
@@ -1670,7 +1682,7 @@ def main():
                 game_state, previous_game_state = update_game_state(game_state, previous_game_state, "game_over")
                 time_elapsed = pygame.time.get_ticks() / 1000 - start_game_time - paused_time
                 store_game_info(score, player.level, wave, time_elapsed)
-                display_end_screen(end_screen, game_over_text, all_sprites, screen_effect_sprites, text_sprites)
+                display_end_screen(end_screen, game_over_text, play_again_button, play_again_text_effect_1, play_again_text, play_again_text_effect_2, all_sprites, screen_effect_sprites, text_sprites, user_interface_sprites)
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
