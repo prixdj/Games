@@ -1,25 +1,23 @@
 # Author: prixdj
 # Date created: 15/02/2026
-# Date updated: 16/06/2026
-# Version: 0.2.0
+# Date updated: 03/09/2026
+# Version: 0.2.2
 # Description: A game like asteroids and vampire survivors
 
 ## Improvements
 
-# Even more enemy types
-# Fix spawn radius
 # Controls screen
 # Previous runs thing
 
 
 ## Imports
 
-import pygame
-from pygame.locals import *     # type: ignore
+import math
 import random as rand
 import sys
-import math
 
+import pygame
+from pygame.locals import *  # type: ignore
 
 ## Constants and Variables
 
@@ -65,6 +63,7 @@ LEVEL_UP_COMPLETE = pygame.event.custom_type()
 
 ## Classes
 
+
 class Background(pygame.sprite.Sprite):
     """The background image class.
 
@@ -72,13 +71,14 @@ class Background(pygame.sprite.Sprite):
         image (surf): The blue.png image scaled to the size of the screen.
         rect (rect): The rect of the background image.
     """
+
     def __init__(self):
         """Initialises the background object."""
         super().__init__()
         self._layer = 0
-        self.image = pygame.image.load('survoids/images/blue.png')
+        self.image = pygame.image.load("survoids/images/blue.png")
         self.image = pygame.transform.scale(self.image, (WIDTH, HEIGHT))
-        self.rect = self.image.get_rect(center = (WIDTH/2, HEIGHT/2))
+        self.rect = self.image.get_rect(center=(WIDTH / 2, HEIGHT / 2))
 
 
 class Mouse(pygame.sprite.Sprite):
@@ -89,12 +89,13 @@ class Mouse(pygame.sprite.Sprite):
         surf (surf): The surface of the mouse cursor.
         rect (rect): The rect of the mouse cursor.
     """
+
     def __init__(self, *groups):
         """Initialises the mouse object."""
         super().__init__(*groups)
         self._layer = 9
-        self.image = pygame.image.load('survoids/images/crosshair.png').convert_alpha()
-        self.surf = pygame.Surface((30,33))
+        self.image = pygame.image.load("survoids/images/crosshair.png").convert_alpha()
+        self.surf = pygame.Surface((30, 33))
         self.rect = self.surf.get_rect()
 
     def update(self):
@@ -141,21 +142,26 @@ class Player(pygame.sprite.Sprite):
         bullet_holdoff (int): The max number of frames before the player fires another bullet.
         bullet_delay (int): The current number of frames before the player fires another bullet.
     """
+
     def __init__(self, *groups):
         """Initialises the player object."""
         super().__init__(*groups)
         self._layer = 5
 
         self.scaled_size = (45, 37)
-        unscaled_image = pygame.image.load('survoids/images/player.png').convert_alpha()
-        unscaled_IMMUNE_IMAGE = pygame.image.load('survoids/images/player_immune.png').convert_alpha()
+        unscaled_image = pygame.image.load("survoids/images/player.png").convert_alpha()
+        unscaled_IMMUNE_IMAGE = pygame.image.load(
+            "survoids/images/player_immune.png"
+        ).convert_alpha()
         self.image = pygame.transform.scale(unscaled_image, self.scaled_size)
         self.NORMAL_IMAGE = pygame.transform.scale(unscaled_image, self.scaled_size)
-        self.IMMUNE_IMAGE = pygame.transform.scale(unscaled_IMMUNE_IMAGE, self.scaled_size)
+        self.IMMUNE_IMAGE = pygame.transform.scale(
+            unscaled_IMMUNE_IMAGE, self.scaled_size
+        )
         self.original_image = self.NORMAL_IMAGE
 
         self.surf = pygame.Surface(self.scaled_size)
-        self.rect = self.surf.get_rect(center = (WIDTH / 2, HEIGHT / 2))
+        self.rect = self.surf.get_rect(center=(WIDTH / 2, HEIGHT / 2))
         self.x = WIDTH / 2
         self.y = HEIGHT / 2
         self.angle = 90.0
@@ -223,7 +229,7 @@ class Player(pygame.sprite.Sprite):
         else:
             self.update_immune_timer()
 
-    def move(self) -> None:     # Should only trigger if the game state is in_game
+    def move(self) -> None:  # Should only trigger if the game state is in_game
         """Changes the acceleration values of the player."""
         keyboard = pygame.key.get_pressed()
 
@@ -241,7 +247,7 @@ class Player(pygame.sprite.Sprite):
             if self.acceleration_right < self.MAX_ACCELERATION_RIGHT:
                 self.acceleration_right += self.acceleration_speed
 
-    def calc_movement(self) -> None:        # Should not trigger if the game state is paused
+    def calc_movement(self) -> None:  # Should not trigger if the game state is paused
         """Calculates the movement of the player and updates the player's coordinates."""
         # Decelerate
         if self.acceleration_up > 0.0:
@@ -292,7 +298,6 @@ class Player(pygame.sprite.Sprite):
 
         self.bullet_holdoff = 50
         self.bullet_delay = 0
-
 
     def update(self):
         """Updates the player's level, powers and keeps the object on screen."""
@@ -359,13 +364,14 @@ class Thruster(pygame.sprite.Sprite):
         angle (float): The angle of the thruster.
         visibility (bool): Whether the thruster is visible or not.
     """
+
     def __init__(self):
         """Initialises the thruster object."""
         super().__init__()
         self._layer = 4
-        self.image = pygame.image.load('survoids/images/thruster.png').convert_alpha()
-        self.original_image = pygame.image.load('survoids/images/thruster.png')
-        self.surf = pygame.Surface((14,31))
+        self.image = pygame.image.load("survoids/images/thruster.png").convert_alpha()
+        self.original_image = pygame.image.load("survoids/images/thruster.png")
+        self.surf = pygame.Surface((14, 31))
         self.rect = self.surf.get_rect()
         self.OFFSET = 30
         self.angle = 90.0
@@ -377,10 +383,10 @@ class Thruster(pygame.sprite.Sprite):
 
         # Visibility
         if keyboard[K_w] or keyboard[K_s] or keyboard[K_a] or keyboard[K_d]:
-            if self.visibility != True:
+            if not self.visibility:
                 self.visibility = True
         else:
-            if self.visibility != False:
+            if self.visibility:
                 self.visibility = False
 
 
@@ -397,7 +403,10 @@ class Bullet(pygame.sprite.Sprite):
         angle (float): The angle of the bullet.
         SPEED (int): The speed of the bullet.
     """
-    def __init__(self, angle: float, pos: tuple[float, float], img: str, size: tuple, speed: int):
+
+    def __init__(
+        self, angle: float, pos: tuple[float, float], img: str, size: tuple, speed: int
+    ):
         """Initialises the bullet object.
 
         Args:
@@ -410,17 +419,17 @@ class Bullet(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 1
 
-        unscaled_image = pygame.image.load(f'survoids/images/{img}').convert_alpha()
+        unscaled_image = pygame.image.load(f"survoids/images/{img}").convert_alpha()
         self.image = pygame.transform.scale(unscaled_image, size)
         self.original_image = pygame.transform.scale(unscaled_image, size)
         self.surf = pygame.Surface(size)
-        self.rect = self.surf.get_rect(center = tuple(map(lambda x: round(x), pos)))
+        self.rect = self.surf.get_rect(center=tuple(map(lambda x: round(x), pos)))
         self.x = pos[0]
         self.y = pos[1]
 
         self.angle = angle
         self.image = pygame.transform.rotate(self.original_image, self.angle)
-        self.rect = self.image.get_rect(center = self.rect.center)
+        self.rect = self.image.get_rect(center=self.rect.center)
 
         self.SPEED = speed
 
@@ -456,12 +465,19 @@ class Enemy(pygame.sprite.Sprite):
         x (float): The unrounded x coordinate of the enemy.
         y (float): The unrounded y coordinate of the enemy.
     """
+
     value: int = 0
     likelihood: int = 0
     SPAWN_RADIUS: int = 450
     MAX_INCREASE_RADIUS: int = 50
 
-    def __init__(self, img: str = "enemy_a.png", size: tuple = (26, 21), speed: int | float = 2, hp: int = 1):
+    def __init__(
+        self,
+        img: str = "enemy_a.png",
+        size: tuple = (26, 21),
+        speed: int | float = 2,
+        hp: int = 1,
+    ):
         """Initialises the enemy object.
 
         Args:
@@ -472,7 +488,7 @@ class Enemy(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 2
 
-        unscaled_image = pygame.image.load(f'survoids/images/{img}').convert_alpha()
+        unscaled_image = pygame.image.load(f"survoids/images/{img}").convert_alpha()
         self.image = pygame.transform.scale(unscaled_image, size)
         self.original_image = pygame.transform.scale(unscaled_image, size)
         self.surf = pygame.Surface(size)
@@ -481,11 +497,17 @@ class Enemy(pygame.sprite.Sprite):
         self.SPEED = speed
         self.hp = hp
 
-        self.angle = rand.randint(0,360)
+        self.angle = rand.randint(0, 360)
         self.radians = -math.radians(self.angle)
 
-        self.x = WIDTH / 2 + rand.randint(Enemy.SPAWN_RADIUS, round(Enemy.SPAWN_RADIUS + Enemy.MAX_INCREASE_RADIUS * self.SPEED)) * math.sin(self.radians)
-        self.y = HEIGHT / 2 + rand.randint(Enemy.SPAWN_RADIUS, round(Enemy.SPAWN_RADIUS + Enemy.MAX_INCREASE_RADIUS * self.SPEED)) * math.cos(self.radians)
+        self.x = WIDTH / 2 + rand.randint(
+            Enemy.SPAWN_RADIUS,
+            round(Enemy.SPAWN_RADIUS + Enemy.MAX_INCREASE_RADIUS * self.SPEED),
+        ) * math.sin(self.radians)
+        self.y = HEIGHT / 2 + rand.randint(
+            Enemy.SPAWN_RADIUS,
+            round(Enemy.SPAWN_RADIUS + Enemy.MAX_INCREASE_RADIUS * self.SPEED),
+        ) * math.cos(self.radians)
         self.rect.centerx = round(self.x)
         self.rect.centery = round(self.y)
 
@@ -527,6 +549,7 @@ class EnemyA(Enemy):
         value (int): The value of the Enemy class.
         likelihood (int): The likelihood that the Enemy class appears.
     """
+
     value = 5
     likelihood = 10
 
@@ -544,6 +567,7 @@ class EnemyB(Enemy):
         BULLET_HOLDOFF (int): The max number of frames before the B type enemy can fire another bullet.
         bullet_delay (int): The current number of frames before the B type enemy can fire another bullet.
     """
+
     value = 10
     likelihood = 0
 
@@ -554,7 +578,11 @@ class EnemyB(Enemy):
         self.BULLET_HOLDOFF = 60
         self.bullet_delay = 0
 
-    def fire(self, all_sprites: pygame.sprite.LayeredUpdates, enemy_bullet_sprites: pygame.sprite.Group) -> None:
+    def fire(
+        self,
+        all_sprites: pygame.sprite.LayeredUpdates,
+        enemy_bullet_sprites: pygame.sprite.Group,
+    ) -> None:
         """Fire the bullet in the direction of the B type enemy if it can.
 
         Args:
@@ -562,7 +590,9 @@ class EnemyB(Enemy):
             enemy_bullet_sprites (pygame.sprite.Group): The enemy bullet sprites group.
         """
         if self.bullet_delay <= 0:
-            bullet = Bullet(self.get_angle(), self.get_pos(), "enemy_b_bullet.png", (4, 16), 4)
+            bullet = Bullet(
+                self.get_angle(), self.get_pos(), "enemy_b_bullet.png", (4, 16), 4
+            )
             add_sprite_to_groups(bullet, all_sprites, enemy_bullet_sprites)
             self.bullet_delay = self.BULLET_HOLDOFF
         else:
@@ -576,6 +606,7 @@ class EnemyC(Enemy):
         value (int): The value of the Enemy class.
         likelihood (int): The likelihood that the Enemy class appears.
     """
+
     value = 10
     likelihood = 0
 
@@ -594,7 +625,8 @@ class Hitmarker(pygame.sprite.Sprite):
         time (int): The number of frames the hitmarker has been on screen.
         TIMEOUT (int): The number of frames before the hitmarker times out.
     """
-    def __init__(self, pos:tuple[float, float]):
+
+    def __init__(self, pos: tuple[float, float]):
         """Initialises the hitmarker object.
 
         Args:
@@ -603,12 +635,12 @@ class Hitmarker(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 3
 
-        self.image = pygame.image.load(f'survoids/images/hit_marker.png').convert_alpha()
-        self.surf = pygame.Surface((37,37))
-        self.rect = self.surf.get_rect(center = tuple(map(lambda x: round(x), pos)))
+        self.image = pygame.image.load("survoids/images/hit_marker.png").convert_alpha()
+        self.surf = pygame.Surface((37, 37))
+        self.rect = self.surf.get_rect(center=tuple(map(lambda x: round(x), pos)))
 
         self.time = 0
-        self.TIMEOUT = 31       # 31 instead of 30 as update_time() is called immediately after initialisation of an object and before checking timeout
+        self.TIMEOUT = 31  # 31 instead of 30 as update_time() is called immediately after initialisation of an object and before checking timeout
 
     def check_timeout(self) -> bool:
         """Checks whether the hitmarker has timed out or not.
@@ -633,6 +665,7 @@ class Power(pygame.sprite.Sprite):
         surf (surf): The surface of the power up.
         rect (rect): The rect of the power up.
     """
+
     def __init__(self, pos: tuple[int, int], image: str):
         """Initialisation of the power up object.
 
@@ -643,9 +676,9 @@ class Power(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 6
 
-        self.image = pygame.image.load(f'survoids/images/{image}').convert_alpha()
-        self.surf = pygame.Surface((37,37))
-        self.rect = self.surf.get_rect(center = pos)
+        self.image = pygame.image.load(f"survoids/images/{image}").convert_alpha()
+        self.surf = pygame.Surface((37, 37))
+        self.rect = self.surf.get_rect(center=pos)
 
 
 class UserInterface(pygame.sprite.Sprite):
@@ -657,7 +690,15 @@ class UserInterface(pygame.sprite.Sprite):
         rect (rect): The rect of the user interface.
         clicked (bool): The state of whether the user interface is being clicked or not.
     """
-    def __init__(self, img: str, width: float, height: float, pos: tuple[int, int], scale: bool = False):
+
+    def __init__(
+        self,
+        img: str,
+        width: float,
+        height: float,
+        pos: tuple[int, int],
+        scale: bool = False,
+    ):
         """Initialises the user interface object.
 
         Args:
@@ -670,13 +711,13 @@ class UserInterface(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 6
 
-        self.image = pygame.image.load(f'survoids/images/{img}').convert_alpha()
+        self.image = pygame.image.load(f"survoids/images/{img}").convert_alpha()
 
         if scale:
             self.image = pygame.transform.scale(self.image, (width, height))
 
-        self.surf = pygame.Surface((width,height))
-        self.rect = self.surf.get_rect(center = pos)
+        self.surf = pygame.Surface((width, height))
+        self.rect = self.surf.get_rect(center=pos)
 
         self.clicked = False
 
@@ -702,7 +743,16 @@ class Text(pygame.sprite.Sprite):
         surf (surf): The surface of the text object.
         rect (rect): The rect of the text object.
     """
-    def __init__(self, initial: str, font_name: str, font_size: int, pos_type: str, pos:tuple[int, int], colour: tuple[int, int, int] = (255, 255, 255)):
+
+    def __init__(
+        self,
+        initial: str,
+        font_name: str,
+        font_size: int,
+        pos_type: str,
+        pos: tuple[int, int],
+        colour: tuple[int, int, int] = (255, 255, 255),
+    ):
         """Initialises the text object.
 
         Args:
@@ -721,7 +771,7 @@ class Text(pygame.sprite.Sprite):
         self.pos = pos
         self.colour = colour
 
-        self.font = pygame.font.Font(f'survoids/fonts/{font_name}.ttf', font_size)
+        self.font = pygame.font.Font(f"survoids/fonts/{font_name}.ttf", font_size)
         self.surf = self.font.render(self.words, True, self.colour)
         self.rect = self.surf.get_rect()
 
@@ -766,17 +816,19 @@ class VolumeMeter(pygame.sprite.Sprite):
         obj (pygame.sprite.Sprite | None): The object that the volume meter is assigned to.
         attr (str | None): The attribute of the object or variable that the volume meter is assigned to.
     """
+
     def __init__(
-                self,
-                pos: tuple[int, int],
-                initial_val: int | float,
-                width: int,
-                height: int,
-                front_colour: tuple[int, int, int],
-                back_colour: tuple[int, int, int] = (255, 255, 255),
-                *,
-                obj: pygame.sprite.Sprite | None = None,
-                attr: str | None = None):
+        self,
+        pos: tuple[int, int],
+        initial_val: int | float,
+        width: int,
+        height: int,
+        front_colour: tuple[int, int, int],
+        back_colour: tuple[int, int, int] = (255, 255, 255),
+        *,
+        obj: pygame.sprite.Sprite | None = None,
+        attr: str | None = None,
+    ):
         """Initialises the volume meter class.
 
         Args:
@@ -837,7 +889,9 @@ class VolumeMeter(pygame.sprite.Sprite):
             screen (Surface): The pygame screen.
         """
         back_rect = pygame.Rect(self.x, self.y, self.width, self.height)
-        volume_rect = pygame.Rect(self.x, self.y, (self.current_vol / self.max_vol) * self.width, self.height)
+        volume_rect = pygame.Rect(
+            self.x, self.y, (self.current_vol / self.max_vol) * self.width, self.height
+        )
 
         pygame.draw.rect(screen, self.back_colour, back_rect)
         pygame.draw.rect(screen, self.front_colour, volume_rect)
@@ -856,6 +910,7 @@ class ScreenEffect(pygame.sprite.Sprite):
         surf (surf): The surface of the screen effect object with transparency and colour values.
         rect (rect): The rect of the screen effect, centered in the middle of the screen.
     """
+
     def __init__(self, colour: tuple[int, int, int], alpha: int = 0):
         """Initialises the screen effect object.
 
@@ -869,10 +924,11 @@ class ScreenEffect(pygame.sprite.Sprite):
         self.surf = pygame.Surface((WIDTH, HEIGHT))
         self.surf.set_alpha(alpha)
         self.surf.fill(colour)
-        self.rect = self.surf.get_rect(center = (WIDTH/2, HEIGHT/2))
+        self.rect = self.surf.get_rect(center=(WIDTH / 2, HEIGHT / 2))
 
 
 ## Functions
+
 
 def calculate_angle_between_points(p1, p2) -> float:
     """Calculates the angle between two points.
@@ -911,7 +967,7 @@ def point_object_to_object(obj1, obj2) -> None:
     """
     obj1.angle = calculate_angle_between_points(obj1, obj2)
     obj1.image = pygame.transform.rotate(obj1.original_image, obj1.angle)
-    obj1.rect = obj1.image.get_rect(center = obj1.rect.center)
+    obj1.rect = obj1.image.get_rect(center=obj1.rect.center)
 
 
 def rotate_object(obj) -> None:
@@ -921,10 +977,13 @@ def rotate_object(obj) -> None:
         obj (pygame Sprite): Has a rect, image, original image and angle.
     """
     obj.image = pygame.transform.rotate(obj.original_image, obj.angle)
-    obj.rect = obj.image.get_rect(center = obj.rect.center)
+    obj.rect = obj.image.get_rect(center=obj.rect.center)
 
 
-def add_sprite_to_groups(sprite: pygame.sprite.Sprite, *groups: pygame.sprite.Group | pygame.sprite.LayeredUpdates) -> None:
+def add_sprite_to_groups(
+    sprite: pygame.sprite.Sprite,
+    *groups: pygame.sprite.Group | pygame.sprite.LayeredUpdates,
+) -> None:
     """Adds the sprite to each provided group.
 
     Args:
@@ -935,7 +994,10 @@ def add_sprite_to_groups(sprite: pygame.sprite.Sprite, *groups: pygame.sprite.Gr
         group.add(sprite)
 
 
-def remove_sprite_from_groups(sprite: pygame.sprite.Sprite, *groups: pygame.sprite.Group | pygame.sprite.LayeredUpdates) -> None:
+def remove_sprite_from_groups(
+    sprite: pygame.sprite.Sprite,
+    *groups: pygame.sprite.Group | pygame.sprite.LayeredUpdates,
+) -> None:
     """Removes the sprite from each provided group.
 
     Args:
@@ -956,15 +1018,23 @@ def adjust_thruster(thruster: Thruster, player: Player) -> None:
     player_angle = player.get_angle()
     angle = -math.radians(player_angle)
 
-    thruster.rect.centerx = player.rect.centerx - round(thruster.OFFSET * math.sin(angle))
-    thruster.rect.centery = player.rect.centery + round(thruster.OFFSET * math.cos(angle))
+    thruster.rect.centerx = player.rect.centerx - round(
+        thruster.OFFSET * math.sin(angle)
+    )
+    thruster.rect.centery = player.rect.centery + round(
+        thruster.OFFSET * math.cos(angle)
+    )
 
     thruster.angle = player.angle
     thruster.image = pygame.transform.rotate(thruster.original_image, thruster.angle)
-    thruster.rect = thruster.image.get_rect(center = thruster.rect.center)
+    thruster.rect = thruster.image.get_rect(center=thruster.rect.center)
 
 
-def fire_bullet(player: Player, all_sprites: pygame.sprite.LayeredUpdates, bullet_sprites: pygame.sprite.Group) -> None:
+def fire_bullet(
+    player: Player,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    bullet_sprites: pygame.sprite.Group,
+) -> None:
     """Creates a bullet in the direction of the player if no delay and space is pressed down.
 
     Args:
@@ -976,7 +1046,9 @@ def fire_bullet(player: Player, all_sprites: pygame.sprite.LayeredUpdates, bulle
 
     if player.bullet_delay <= 0:
         if keyboard[K_SPACE]:
-            bullet = Bullet(player.get_angle(), player.get_pos(), "bullet.png", (4, 24), 25)
+            bullet = Bullet(
+                player.get_angle(), player.get_pos(), "bullet.png", (4, 24), 25
+            )
             add_sprite_to_groups(bullet, all_sprites, bullet_sprites)
             player.bullet_delay = player.bullet_holdoff
     else:
@@ -997,7 +1069,12 @@ def end_wave(enemy_sprites: pygame.sprite.Group) -> bool:
     return False
 
 
-def display_wave_clear(all_sprites: pygame.sprite.LayeredUpdates, text_sprites: pygame.sprite.Group, wave_clear_sprites: pygame.sprite.Group, wave: int) -> None:
+def display_wave_clear(
+    all_sprites: pygame.sprite.LayeredUpdates,
+    text_sprites: pygame.sprite.Group,
+    wave_clear_sprites: pygame.sprite.Group,
+    wave: int,
+) -> None:
     """Displays the wave clear text.
 
     Args:
@@ -1006,11 +1083,17 @@ def display_wave_clear(all_sprites: pygame.sprite.LayeredUpdates, text_sprites: 
         wave_clear_sprites (pygame.sprite.Group): The wave clear sprites group.
         wave (int): The wave number.
     """
-    wave_clear = Text(f"Wave {wave} Cleared", "kenvector_future_thin", 60, "center", (300, 280))
+    wave_clear = Text(
+        f"Wave {wave} Cleared", "kenvector_future_thin", 60, "center", (300, 280)
+    )
     add_sprite_to_groups(wave_clear, all_sprites, text_sprites, wave_clear_sprites)
 
 
-def remove_wave_clear(wave_clear_sprites: pygame.sprite.Group, all_sprites: pygame.sprite.LayeredUpdates, text_sprites: pygame.sprite.Group) -> None:
+def remove_wave_clear(
+    wave_clear_sprites: pygame.sprite.Group,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    text_sprites: pygame.sprite.Group,
+) -> None:
     """Removes the sprites in the wave clear sprites group from all sprite groups.
 
     Args:
@@ -1023,7 +1106,11 @@ def remove_wave_clear(wave_clear_sprites: pygame.sprite.Group, all_sprites: pyga
         text.kill()
 
 
-def spawn_enemies(enemy_wave: list[type[Enemy]], all_sprites: pygame.sprite.LayeredUpdates, enemy_sprites: pygame.sprite.Group) -> None:
+def spawn_enemies(
+    enemy_wave: list[type[Enemy]],
+    all_sprites: pygame.sprite.LayeredUpdates,
+    enemy_sprites: pygame.sprite.Group,
+) -> None:
     """Spawns the enemies in the given wave.
 
     Args:
@@ -1075,17 +1162,17 @@ def change_enemy_likelihoods() -> None:
 
 
 def spawn_waves(
-            all_sprites: pygame.sprite.LayeredUpdates,
-            enemy_sprites: pygame.sprite.Group,
-            text_sprites: pygame.sprite.Group,
-            wave_clear_sprites: pygame.sprite.Group,
-            wave_info_sprites: pygame.sprite.Group,
-            wave_num_text: Text,
-            wave_bar: VolumeMeter,
-            enemy_num_text: Text,
-            wave: int,
-            wave_value: int,
-            wave_delay: int
+    all_sprites: pygame.sprite.LayeredUpdates,
+    enemy_sprites: pygame.sprite.Group,
+    text_sprites: pygame.sprite.Group,
+    wave_clear_sprites: pygame.sprite.Group,
+    wave_info_sprites: pygame.sprite.Group,
+    wave_num_text: Text,
+    wave_bar: VolumeMeter,
+    enemy_num_text: Text,
+    wave: int,
+    wave_value: int,
+    wave_delay: int,
 ) -> tuple[int, int, int]:
     """Spawns waves of enemies if the previous wave has ended and wave delay is 0 or less.
 
@@ -1105,7 +1192,7 @@ def spawn_waves(
     Returns:
         tuple[int, int, int]: Updated values of wave_value, wave and wave_delay
     """
-    if end_wave(enemy_sprites) == True:
+    if end_wave(enemy_sprites):
         if not wave_clear_sprites and wave != 0:
             display_wave_clear(all_sprites, text_sprites, wave_clear_sprites, wave)
             wave_delay = WAVE_HOLDOFF
@@ -1133,15 +1220,15 @@ def spawn_waves(
 
 
 def display_main_screen(
-            title_text: Text,
-            play_text_effect_1: Text,
-            play_text: Text,
-            play_text_effect_2: Text,
-            play_button: UserInterface,
-            all_sprites: pygame.sprite.LayeredUpdates,
-            text_sprites: pygame.sprite.Group,
-            user_interface_sprites: pygame.sprite.Group,
-            main_screen_sprites: pygame.sprite.Group
+    title_text: Text,
+    play_text_effect_1: Text,
+    play_text: Text,
+    play_text_effect_2: Text,
+    play_button: UserInterface,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    text_sprites: pygame.sprite.Group,
+    user_interface_sprites: pygame.sprite.Group,
+    main_screen_sprites: pygame.sprite.Group,
 ) -> None:
     """Displays the main screen objects.
 
@@ -1158,16 +1245,27 @@ def display_main_screen(
     """
     add_sprite_to_groups(title_text, all_sprites, text_sprites, main_screen_sprites)
 
-    add_sprite_to_groups(play_text_effect_1, all_sprites, text_sprites, main_screen_sprites)
+    add_sprite_to_groups(
+        play_text_effect_1, all_sprites, text_sprites, main_screen_sprites
+    )
 
     add_sprite_to_groups(play_text, all_sprites, text_sprites, main_screen_sprites)
 
-    add_sprite_to_groups(play_text_effect_2, all_sprites, text_sprites, main_screen_sprites)
+    add_sprite_to_groups(
+        play_text_effect_2, all_sprites, text_sprites, main_screen_sprites
+    )
 
-    add_sprite_to_groups(play_button, all_sprites, user_interface_sprites, main_screen_sprites)
+    add_sprite_to_groups(
+        play_button, all_sprites, user_interface_sprites, main_screen_sprites
+    )
 
 
-def remove_main_screen(main_screen_sprites: pygame.sprite.Group, all_sprites: pygame.sprite.LayeredUpdates, text_sprites: pygame.sprite.Group, user_interface_sprites: pygame.sprite.Group) -> None:
+def remove_main_screen(
+    main_screen_sprites: pygame.sprite.Group,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    text_sprites: pygame.sprite.Group,
+    user_interface_sprites: pygame.sprite.Group,
+) -> None:
     """Removes all sprites in the main screen sprites group from their groups.
 
     Args:
@@ -1178,12 +1276,18 @@ def remove_main_screen(main_screen_sprites: pygame.sprite.Group, all_sprites: py
     """
     for sprite in main_screen_sprites.sprites():
         if sprite in text_sprites:
-            remove_sprite_from_groups(sprite, all_sprites, text_sprites, main_screen_sprites)
+            remove_sprite_from_groups(
+                sprite, all_sprites, text_sprites, main_screen_sprites
+            )
         elif sprite in user_interface_sprites:
-            remove_sprite_from_groups(sprite, all_sprites, user_interface_sprites, main_screen_sprites)
+            remove_sprite_from_groups(
+                sprite, all_sprites, user_interface_sprites, main_screen_sprites
+            )
 
 
-def display_background(background: Background, all_sprites: pygame.sprite.LayeredUpdates) -> None:
+def display_background(
+    background: Background, all_sprites: pygame.sprite.LayeredUpdates
+) -> None:
     """Displays the background object.
 
     Args:
@@ -1204,12 +1308,12 @@ def display_mouse(mouse: Mouse, all_sprites: pygame.sprite.LayeredUpdates) -> No
 
 
 def display_pause_screen(
-            pause_screen: ScreenEffect,
-            pause_text: Text,
-            all_sprites: pygame.sprite.LayeredUpdates,
-            screen_effect_sprites: pygame.sprite.Group,
-            text_sprites: pygame.sprite.Group,
-            pause_screen_sprites: pygame.sprite.Group
+    pause_screen: ScreenEffect,
+    pause_text: Text,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    screen_effect_sprites: pygame.sprite.Group,
+    text_sprites: pygame.sprite.Group,
+    pause_screen_sprites: pygame.sprite.Group,
 ) -> None:
     """Displays the pause screen objects.
 
@@ -1221,16 +1325,18 @@ def display_pause_screen(
         text_sprites (pygame.sprite.Group): The text sprites group.
         pause_screen_sprites (pygame.sprite.Group): The pause screen sprites group.
     """
-    add_sprite_to_groups(pause_screen, all_sprites, screen_effect_sprites, pause_screen_sprites)
+    add_sprite_to_groups(
+        pause_screen, all_sprites, screen_effect_sprites, pause_screen_sprites
+    )
 
     add_sprite_to_groups(pause_text, all_sprites, text_sprites, pause_screen_sprites)
 
 
 def remove_pause_screen(
-            pause_screen_sprites: pygame.sprite.Group,
-            all_sprites: pygame.sprite.LayeredUpdates,
-            screen_effect_sprites: pygame.sprite.Group,
-            text_sprites: pygame.sprite.Group
+    pause_screen_sprites: pygame.sprite.Group,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    screen_effect_sprites: pygame.sprite.Group,
+    text_sprites: pygame.sprite.Group,
 ) -> None:
     """Removes all sprites in the pause screen sprites group from their groups.
 
@@ -1242,12 +1348,18 @@ def remove_pause_screen(
     """
     for sprite in pause_screen_sprites.sprites():
         if sprite in screen_effect_sprites:
-            remove_sprite_from_groups(sprite, all_sprites, screen_effect_sprites, pause_screen_sprites)
+            remove_sprite_from_groups(
+                sprite, all_sprites, screen_effect_sprites, pause_screen_sprites
+            )
         elif sprite in text_sprites:
-            remove_sprite_from_groups(sprite, all_sprites, text_sprites, pause_screen_sprites)
+            remove_sprite_from_groups(
+                sprite, all_sprites, text_sprites, pause_screen_sprites
+            )
 
 
-def display_player(player: Player, thruster: Thruster, all_sprites: pygame.sprite.LayeredUpdates) -> None:
+def display_player(
+    player: Player, thruster: Thruster, all_sprites: pygame.sprite.LayeredUpdates
+) -> None:
     """Displays the player object and its thruster.
 
     Args:
@@ -1260,20 +1372,20 @@ def display_player(player: Player, thruster: Thruster, all_sprites: pygame.sprit
 
 
 def display_user_interface(
-            player_x_ui: UserInterface,
-            player_life_icon: UserInterface,
-            wave_num_text: Text,
-            wave_bar: VolumeMeter,
-            enemy_icon: UserInterface,
-            enemy_x_ui: UserInterface,
-            enemy_num_text: Text,
-            lives_text: Text,
-            score_text: Text,
-            all_sprites: pygame.sprite.LayeredUpdates,
-            user_interface_sprites: pygame.sprite.Group,
-            wave_info_sprites: pygame.sprite.Group,
-            text_sprites: pygame.sprite.Group,
-            volume_meter_sprites: pygame.sprite.Group
+    player_x_ui: UserInterface,
+    player_life_icon: UserInterface,
+    wave_num_text: Text,
+    wave_bar: VolumeMeter,
+    enemy_icon: UserInterface,
+    enemy_x_ui: UserInterface,
+    enemy_num_text: Text,
+    lives_text: Text,
+    score_text: Text,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    user_interface_sprites: pygame.sprite.Group,
+    wave_info_sprites: pygame.sprite.Group,
+    text_sprites: pygame.sprite.Group,
+    volume_meter_sprites: pygame.sprite.Group,
 ) -> None:
     """Displays the user interface objects.
 
@@ -1301,9 +1413,13 @@ def display_user_interface(
 
     add_sprite_to_groups(wave_bar, all_sprites, volume_meter_sprites, wave_info_sprites)
 
-    add_sprite_to_groups(enemy_icon, all_sprites, user_interface_sprites, wave_info_sprites)
+    add_sprite_to_groups(
+        enemy_icon, all_sprites, user_interface_sprites, wave_info_sprites
+    )
 
-    add_sprite_to_groups(enemy_x_ui, all_sprites, user_interface_sprites, wave_info_sprites)
+    add_sprite_to_groups(
+        enemy_x_ui, all_sprites, user_interface_sprites, wave_info_sprites
+    )
 
     add_sprite_to_groups(enemy_num_text, all_sprites, text_sprites, wave_info_sprites)
 
@@ -1312,7 +1428,9 @@ def display_user_interface(
     add_sprite_to_groups(score_text, all_sprites, text_sprites)
 
 
-def hide_wave_info(wave_info_sprites: pygame.sprite.Group, all_sprites: pygame.sprite.LayeredUpdates) -> None:
+def hide_wave_info(
+    wave_info_sprites: pygame.sprite.Group, all_sprites: pygame.sprite.LayeredUpdates
+) -> None:
     """Hides the sprites in the wave info sprites group.
 
     Args:
@@ -1324,8 +1442,7 @@ def hide_wave_info(wave_info_sprites: pygame.sprite.Group, all_sprites: pygame.s
 
 
 def redisplay_wave_info(
-            all_sprites: pygame.sprite.LayeredUpdates,
-            wave_info_sprites: pygame.sprite.Group
+    all_sprites: pygame.sprite.LayeredUpdates, wave_info_sprites: pygame.sprite.Group
 ) -> None:
     """Redisplays the sprites previously in the wave info sprite group.
 
@@ -1351,7 +1468,9 @@ def update_stats(player: Player, score: int) -> int:
     return score + 20
 
 
-def update_game_state(game_state: str, previous_game_state: str, new_state: str) -> tuple[str, str]:
+def update_game_state(
+    game_state: str, previous_game_state: str, new_state: str
+) -> tuple[str, str]:
     """Updates the game's state.
 
     Args:
@@ -1397,11 +1516,11 @@ def check_game_over(lives: int) -> bool:
 
 
 def display_powers(
-            player: Player,
-            all_sprites: pygame.sprite.LayeredUpdates,
-            power_sprites: pygame.sprite.Group,
-            text_sprites: pygame.sprite.Group,
-            power_up_text_sprites: pygame.sprite.Group,
+    player: Player,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    power_sprites: pygame.sprite.Group,
+    text_sprites: pygame.sprite.Group,
+    power_up_text_sprites: pygame.sprite.Group,
 ) -> None:
     """Displays the power objects and their text objects.
 
@@ -1420,7 +1539,9 @@ def display_powers(
     lightning_text = Text("(1)", "kenvector_future_thin", 8, "midtop", (224, 520))
 
     add_sprite_to_groups(lightning_power, all_sprites, power_sprites)
-    add_sprite_to_groups(lightning_text, all_sprites, text_sprites, power_up_text_sprites)
+    add_sprite_to_groups(
+        lightning_text, all_sprites, text_sprites, power_up_text_sprites
+    )
 
     if player.acceleration_speed < 0.8:
         speed_power = Power((300, 483), "powerup2.png")
@@ -1441,10 +1562,10 @@ def display_powers(
 
 
 def remove_powers(
-            power_sprites: pygame.sprite.Group,
-            power_up_text_sprites: pygame.sprite.Group,
-            all_sprites: pygame.sprite.LayeredUpdates,
-            text_sprites: pygame.sprite.Group
+    power_sprites: pygame.sprite.Group,
+    power_up_text_sprites: pygame.sprite.Group,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    text_sprites: pygame.sprite.Group,
 ) -> None:
     """Removes all sprites in the power sprites group and the power up text sprites group from their groups.
 
@@ -1459,22 +1580,24 @@ def remove_powers(
         power.kill()
 
     for text in power_up_text_sprites.sprites():
-        remove_sprite_from_groups(text, all_sprites, text_sprites, power_up_text_sprites)
+        remove_sprite_from_groups(
+            text, all_sprites, text_sprites, power_up_text_sprites
+        )
         text.kill()
 
 
 def display_end_screen(
-            end_screen: ScreenEffect,
-            game_over_text: Text,
-            retry_button: UserInterface,
-            retry_text_effect_1: Text,
-            retry_text: Text,
-            retry_text_effect_2: Text,
-            all_sprites: pygame.sprite.LayeredUpdates,
-            end_screen_sprites: pygame.sprite.Group,
-            screen_effect_sprites: pygame.sprite.Group,
-            text_sprites: pygame.sprite.Group,
-            user_interface_sprites: pygame.sprite.Group
+    end_screen: ScreenEffect,
+    game_over_text: Text,
+    retry_button: UserInterface,
+    retry_text_effect_1: Text,
+    retry_text: Text,
+    retry_text_effect_2: Text,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    end_screen_sprites: pygame.sprite.Group,
+    screen_effect_sprites: pygame.sprite.Group,
+    text_sprites: pygame.sprite.Group,
+    user_interface_sprites: pygame.sprite.Group,
 ) -> None:
     """Displays the end screen objects.
 
@@ -1491,25 +1614,33 @@ def display_end_screen(
         text_sprites (pygame.sprite.Group): The text sprites group.
         user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
     """
-    add_sprite_to_groups(end_screen, all_sprites, end_screen_sprites, screen_effect_sprites)
+    add_sprite_to_groups(
+        end_screen, all_sprites, end_screen_sprites, screen_effect_sprites
+    )
 
     add_sprite_to_groups(game_over_text, all_sprites, end_screen_sprites, text_sprites)
 
-    add_sprite_to_groups(retry_button, all_sprites, end_screen_sprites, user_interface_sprites)
+    add_sprite_to_groups(
+        retry_button, all_sprites, end_screen_sprites, user_interface_sprites
+    )
 
-    add_sprite_to_groups(retry_text_effect_1, all_sprites, end_screen_sprites, text_sprites)
+    add_sprite_to_groups(
+        retry_text_effect_1, all_sprites, end_screen_sprites, text_sprites
+    )
 
     add_sprite_to_groups(retry_text, all_sprites, end_screen_sprites, text_sprites)
 
-    add_sprite_to_groups(retry_text_effect_2, all_sprites, end_screen_sprites, text_sprites)
+    add_sprite_to_groups(
+        retry_text_effect_2, all_sprites, end_screen_sprites, text_sprites
+    )
 
 
 def remove_end_screen(
-        end_screen_sprites: pygame.sprite.Group,
-        all_sprites: pygame.sprite.LayeredUpdates,
-        screen_effect_sprites: pygame.sprite.Group,
-        text_sprites: pygame.sprite.Group,
-        user_interface_sprites: pygame.sprite.Group
+    end_screen_sprites: pygame.sprite.Group,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    screen_effect_sprites: pygame.sprite.Group,
+    text_sprites: pygame.sprite.Group,
+    user_interface_sprites: pygame.sprite.Group,
 ) -> None:
     """Removes all end screen sprites.
 
@@ -1522,11 +1653,17 @@ def remove_end_screen(
     """
     for sprite in end_screen_sprites.sprites():
         if sprite in screen_effect_sprites:
-            remove_sprite_from_groups(sprite, all_sprites, screen_effect_sprites, end_screen_sprites)
+            remove_sprite_from_groups(
+                sprite, all_sprites, screen_effect_sprites, end_screen_sprites
+            )
         if sprite in text_sprites:
-            remove_sprite_from_groups(sprite, all_sprites, text_sprites, end_screen_sprites)
+            remove_sprite_from_groups(
+                sprite, all_sprites, text_sprites, end_screen_sprites
+            )
         if sprite in user_interface_sprites:
-            remove_sprite_from_groups(sprite, all_sprites, user_interface_sprites, end_screen_sprites)
+            remove_sprite_from_groups(
+                sprite, all_sprites, user_interface_sprites, end_screen_sprites
+            )
 
 
 def reset_game_results() -> None:
@@ -1554,11 +1691,11 @@ def store_game_info(score: int, level: int, wave: int, time_elapsed: float) -> N
 
 ## Main
 
+
 def main():
     ## Initialisation
 
     pygame.init()
-
 
     ## Initial pygame objects and func calling
     clock = pygame.time.Clock()
@@ -1607,7 +1744,6 @@ def main():
 
     screen_effect_sprites = pygame.sprite.Group()
 
-
     ## Objects
 
     background = Background()
@@ -1618,9 +1754,13 @@ def main():
 
     play_text = Text("PLAY", "kenvector_future", 60, "midtop", (300, 260))
 
-    play_text_effect_1 = Text("PLAY", "kenvector_future", 60, "midtop", (298, 258), (0, 0, 0))
+    play_text_effect_1 = Text(
+        "PLAY", "kenvector_future", 60, "midtop", (298, 258), (0, 0, 0)
+    )
 
-    play_text_effect_2 = Text("PLAY", "kenvector_future", 60, "midtop", (301, 261), (0, 0, 0))
+    play_text_effect_2 = Text(
+        "PLAY", "kenvector_future", 60, "midtop", (301, 261), (0, 0, 0)
+    )
 
     play_button = UserInterface("button.png", 240, 78, (293, 295), True)
 
@@ -1636,15 +1776,33 @@ def main():
 
     score_text = Text(str(score), "kenvector_future_thin", 36, "topright", (596, 8))
 
-    wave_num_text = Text(f"Wave {wave}", "kenvector_future_thin", 30, "midtop", (300, 4))
+    wave_num_text = Text(
+        f"Wave {wave}", "kenvector_future_thin", 30, "midtop", (300, 4)
+    )
 
-    wave_bar = VolumeMeter((50, 80), len(enemy_sprites), 500, 5, (0, 120, 200), (255, 255, 255), obj=None, attr="len(enemy_sprites)")
+    wave_bar = VolumeMeter(
+        (50, 80),
+        len(enemy_sprites),
+        500,
+        5,
+        (0, 120, 200),
+        (255, 255, 255),
+        obj=None,
+        attr="len(enemy_sprites)",
+    )
 
     enemy_x_ui = UserInterface("x.png", 17, 17, (300, 57))
 
     enemy_icon = UserInterface("enemy_icon.png", 31, 27, (272, 57), True)
 
-    enemy_num_text = Text(str(len(enemy_sprites)), "kenvector_future", 24, "midleft", (316, 57), (206, 37, 5))
+    enemy_num_text = Text(
+        str(len(enemy_sprites)),
+        "kenvector_future",
+        24,
+        "midleft",
+        (316, 57),
+        (206, 37, 5),
+    )
 
     pause_screen = ScreenEffect((0, 0, 20), 60)
 
@@ -1658,11 +1816,13 @@ def main():
 
     retry_text = Text("RETRY", "kenvector_future", 60, "midtop", (300, 360))
 
-    retry_text_effect_1 = Text("RETRY", "kenvector_future", 60, "midtop", (298, 358), (0, 0, 0))
+    retry_text_effect_1 = Text(
+        "RETRY", "kenvector_future", 60, "midtop", (298, 358), (0, 0, 0)
+    )
 
-    retry_text_effect_2 = Text("RETRY", "kenvector_future", 60, "midtop", (301, 361), (0, 0, 0))
-
-
+    retry_text_effect_2 = Text(
+        "RETRY", "kenvector_future", 60, "midtop", (301, 361), (0, 0, 0)
+    )
 
     ## Running
 
@@ -1677,10 +1837,32 @@ def main():
                 sys.exit()
 
             if event.type == START_GAME:
-                remove_main_screen(main_screen_sprites, all_sprites, text_sprites, user_interface_sprites)
+                remove_main_screen(
+                    main_screen_sprites,
+                    all_sprites,
+                    text_sprites,
+                    user_interface_sprites,
+                )
                 display_player(player, thruster, all_sprites)
-                display_user_interface(player_x_ui, player_life_icon, wave_num_text, wave_bar, enemy_icon, enemy_x_ui, enemy_num_text, lives_text, score_text, all_sprites, user_interface_sprites, wave_info_sprites, text_sprites, volume_meter_sprites)
-                game_state, previous_game_state = update_game_state(game_state, previous_game_state, "in_game")
+                display_user_interface(
+                    player_x_ui,
+                    player_life_icon,
+                    wave_num_text,
+                    wave_bar,
+                    enemy_icon,
+                    enemy_x_ui,
+                    enemy_num_text,
+                    lives_text,
+                    score_text,
+                    all_sprites,
+                    user_interface_sprites,
+                    wave_info_sprites,
+                    text_sprites,
+                    volume_meter_sprites,
+                )
+                game_state, previous_game_state = update_game_state(
+                    game_state, previous_game_state, "in_game"
+                )
                 start_game_time = pygame.time.get_ticks() / 1000
 
             if event.type == IMMUNE_OFF:
@@ -1689,7 +1871,9 @@ def main():
                 player.set_vulnerable()
 
             if event.type == ENEMY_HIT:
-                remove_sprite_from_groups(event.bullet, all_sprites, player_bullet_sprites)
+                remove_sprite_from_groups(
+                    event.bullet, all_sprites, player_bullet_sprites
+                )
                 event.bullet.kill()
                 if event.enemy.hp > 1:
                     event.enemy.hp -= 1
@@ -1719,19 +1903,45 @@ def main():
 
             if event.type == LEVEL_UP:
                 if not power_sprites:
-                    display_powers(player, all_sprites, power_sprites, text_sprites, power_up_text_sprites)
+                    display_powers(
+                        player,
+                        all_sprites,
+                        power_sprites,
+                        text_sprites,
+                        power_up_text_sprites,
+                    )
 
             if event.type == LEVEL_UP_COMPLETE:
-                remove_powers(power_sprites, power_up_text_sprites, all_sprites, text_sprites)
+                remove_powers(
+                    power_sprites, power_up_text_sprites, all_sprites, text_sprites
+                )
 
             if event.type == GAME_OVER:
-                game_state, previous_game_state = update_game_state(game_state, previous_game_state, "game_over")
-                time_elapsed = pygame.time.get_ticks() / 1000 - start_game_time - paused_time
+                game_state, previous_game_state = update_game_state(
+                    game_state, previous_game_state, "game_over"
+                )
+                time_elapsed = (
+                    pygame.time.get_ticks() / 1000 - start_game_time - paused_time
+                )
                 store_game_info(score, player.level, wave, time_elapsed)
-                display_end_screen(end_screen, game_over_text, retry_button, retry_text_effect_1, retry_text, retry_text_effect_2, all_sprites, end_screen_sprites, screen_effect_sprites, text_sprites, user_interface_sprites)
+                display_end_screen(
+                    end_screen,
+                    game_over_text,
+                    retry_button,
+                    retry_text_effect_1,
+                    retry_text,
+                    retry_text_effect_2,
+                    all_sprites,
+                    end_screen_sprites,
+                    screen_effect_sprites,
+                    text_sprites,
+                    user_interface_sprites,
+                )
 
             if event.type == RETRY:
-                game_state, previous_game_state = update_game_state(game_state, previous_game_state, "in_game")
+                game_state, previous_game_state = update_game_state(
+                    game_state, previous_game_state, "in_game"
+                )
 
                 score = 0
 
@@ -1749,7 +1959,13 @@ def main():
 
                 enemy_sprites.empty()
 
-                remove_end_screen(end_screen_sprites, all_sprites, screen_effect_sprites, text_sprites, user_interface_sprites)
+                remove_end_screen(
+                    end_screen_sprites,
+                    all_sprites,
+                    screen_effect_sprites,
+                    text_sprites,
+                    user_interface_sprites,
+                )
 
                 score_text.update_words(str(score))
                 enemy_num_text.update_words(str(len(enemy_sprites)))
@@ -1768,13 +1984,13 @@ def main():
                 if event.button == 1:
                     if game_state == "main_screen":
                         if check_mouse_click(play_button):
-                            if play_button.clicked == True:
+                            if play_button.clicked:
                                 pygame.event.post(pygame.event.Event(START_GAME))
                         else:
                             play_button.change_clicked(False)
                     if game_state == "game_over":
                         if check_mouse_click(retry_button):
-                            if retry_button.clicked == True:
+                            if retry_button.clicked:
                                 pygame.event.post(pygame.event.Event(RETRY))
                         else:
                             retry_button.change_clicked(False)
@@ -1782,11 +1998,20 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     if game_state == "paused":
-                        game_state, previous_game_state = update_game_state(game_state, previous_game_state, previous_game_state)
-                        remove_pause_screen(pause_screen_sprites, all_sprites, screen_effect_sprites, text_sprites)
+                        game_state, previous_game_state = update_game_state(
+                            game_state, previous_game_state, previous_game_state
+                        )
+                        remove_pause_screen(
+                            pause_screen_sprites,
+                            all_sprites,
+                            screen_effect_sprites,
+                            text_sprites,
+                        )
                         paused_time += pygame.time.get_ticks() / 1000 - start_pause_time
                     elif game_state == "in_game":
-                        game_state, previous_game_state = update_game_state(game_state, previous_game_state, "paused")
+                        game_state, previous_game_state = update_game_state(
+                            game_state, previous_game_state, "paused"
+                        )
                         start_pause_time = pygame.time.get_ticks() / 1000
                 # test keybinds
                 if event.key == pygame.K_6:
@@ -1814,13 +2039,30 @@ def main():
                     display_mouse(mouse, all_sprites)
 
                 if not main_screen_sprites:
-                    display_main_screen(title_text, play_text_effect_1, play_text, play_text_effect_2, play_button, all_sprites, text_sprites, user_interface_sprites, main_screen_sprites)
+                    display_main_screen(
+                        title_text,
+                        play_text_effect_1,
+                        play_text,
+                        play_text_effect_2,
+                        play_button,
+                        all_sprites,
+                        text_sprites,
+                        user_interface_sprites,
+                        main_screen_sprites,
+                    )
                 # display main screen with a play button for now can add other stuff later
             case "paused":
                 if not pause_screen_sprites:
-                    display_pause_screen(pause_screen, pause_text, all_sprites, screen_effect_sprites, text_sprites, pause_screen_sprites)
+                    display_pause_screen(
+                        pause_screen,
+                        pause_text,
+                        all_sprites,
+                        screen_effect_sprites,
+                        text_sprites,
+                        pause_screen_sprites,
+                    )
 
-                if thruster.visibility != False:
+                if thruster.visibility:
                     thruster.visibility = False
 
                 rotate_object(player)
@@ -1829,12 +2071,28 @@ def main():
 
                 fire_bullet(player, all_sprites, player_bullet_sprites)
 
-                wave_value, wave, wave_delay = spawn_waves(all_sprites, enemy_sprites, text_sprites, wave_clear_sprites, wave_info_sprites, wave_num_text, wave_bar, enemy_num_text, wave, wave_value, wave_delay)
+                wave_value, wave, wave_delay = spawn_waves(
+                    all_sprites,
+                    enemy_sprites,
+                    text_sprites,
+                    wave_clear_sprites,
+                    wave_info_sprites,
+                    wave_num_text,
+                    wave_bar,
+                    enemy_num_text,
+                    wave,
+                    wave_value,
+                    wave_delay,
+                )
 
-                if pygame.sprite.spritecollideany(player, enemy_sprites, pygame.sprite.collide_rect_ratio(0.8)):
+                if pygame.sprite.spritecollideany(
+                    player, enemy_sprites, pygame.sprite.collide_rect_ratio(0.8)
+                ):
                     pygame.event.post(pygame.event.Event(PLAYER_HIT))
 
-                if pygame.sprite.spritecollideany(player, enemy_bullet_sprites, pygame.sprite.collide_rect_ratio(0.6)):
+                if pygame.sprite.spritecollideany(
+                    player, enemy_bullet_sprites, pygame.sprite.collide_rect_ratio(0.6)
+                ):
                     pygame.event.post(pygame.event.Event(PLAYER_HIT))
 
                 player.move()
@@ -1849,34 +2107,44 @@ def main():
                     enemy.move()
                     enemy.fire(all_sprites, enemy_bullet_sprites)
 
-                for bullet in enemy_bullet_sprites.sprites() + player_bullet_sprites.sprites():
+                for bullet in (
+                    enemy_bullet_sprites.sprites() + player_bullet_sprites.sprites()
+                ):
                     bullet.move()
             case "game_over":
                 rotate_object(player)
 
-                if thruster.visibility != False:
+                if thruster.visibility:
                     thruster.visibility = False
 
                 for enemy in enemy_sprites:
                     enemy.move()
                     enemy.fire(all_sprites, enemy_bullet_sprites)
 
-                for bullet in enemy_bullet_sprites.sprites() + player_bullet_sprites.sprites():
+                for bullet in (
+                    enemy_bullet_sprites.sprites() + player_bullet_sprites.sprites()
+                ):
                     bullet.move()
 
         for meter in volume_meter_sprites:
-                    if meter.attr == "len(enemy_sprites)":
-                        meter.update_current_vol(len(enemy_sprites))
-                    else:
-                        meter.update_current_vol()
+            if meter.attr == "len(enemy_sprites)":
+                meter.update_current_vol(len(enemy_sprites))
+            else:
+                meter.update_current_vol()
 
         for enemy in enemy_sprites:
             point_object_to_object(enemy, player)
 
-            bullet_collision = pygame.sprite.spritecollideany(enemy, player_bullet_sprites)
+            bullet_collision = pygame.sprite.spritecollideany(
+                enemy, player_bullet_sprites
+            )
 
             if bullet_collision:
-                pygame.event.post(pygame.event.Event(ENEMY_HIT, {"enemy": enemy, "bullet": bullet_collision}))
+                pygame.event.post(
+                    pygame.event.Event(
+                        ENEMY_HIT, {"enemy": enemy, "bullet": bullet_collision}
+                    )
+                )
 
         for hitmarker in hitmarker_sprites.sprites():
             hitmarker.update_time()
@@ -1884,17 +2152,15 @@ def main():
                 remove_sprite_from_groups(hitmarker, all_sprites, hitmarker_sprites)
                 hitmarker.kill()
 
-
         ## Updating objects
 
         all_sprites.update()
 
         adjust_thruster(thruster, player)
 
-
         ## Drawing objects
 
-        screen.fill((0,0,0))
+        screen.fill((0, 0, 0))
 
         for entity in all_sprites:
             if isinstance(entity, Text) or isinstance(entity, ScreenEffect):
@@ -1902,10 +2168,11 @@ def main():
             elif isinstance(entity, VolumeMeter):
                 entity.draw(screen)
             else:
-                if not(isinstance(entity, Thruster) and entity.visibility == False):
+                if not (isinstance(entity, Thruster) and not entity.visibility):
                     screen.blit(entity.image, entity.rect)
 
         pygame.display.flip()
+
 
 if __name__ == "__main__":
     main()
