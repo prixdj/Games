@@ -17,7 +17,6 @@ import random as rand
 import sys
 
 import pygame
-from pygame.locals import *  # type: ignore
 
 ## Constants and Variables
 
@@ -234,16 +233,16 @@ class Player(pygame.sprite.Sprite):
         keyboard = pygame.key.get_pressed()
 
         # Accelerate
-        if keyboard[K_w]:
+        if keyboard[pygame.K_w]:
             if self.acceleration_up < self.MAX_ACCELERATION_UP:
                 self.acceleration_up += self.acceleration_speed
-        if keyboard[K_s]:
+        if keyboard[pygame.K_s]:
             if self.acceleration_down < self.MAX_ACCELERATION_DOWN:
                 self.acceleration_down += self.acceleration_speed
-        if keyboard[K_a]:
+        if keyboard[pygame.K_a]:
             if self.acceleration_left < self.MAX_ACCELERATION_LEFT:
                 self.acceleration_left += self.acceleration_speed
-        if keyboard[K_d]:
+        if keyboard[pygame.K_d]:
             if self.acceleration_right < self.MAX_ACCELERATION_RIGHT:
                 self.acceleration_right += self.acceleration_speed
 
@@ -315,14 +314,14 @@ class Player(pygame.sprite.Sprite):
 
                 used_level = False
 
-                if self.bullet_holdoff > 6 and keyboard[K_1]:
+                if self.bullet_holdoff > 6 and keyboard[pygame.K_1]:
                     self.bullet_holdoff -= 2
                     used_level = True
-                elif self.acceleration_speed < 0.8 and keyboard[K_2]:
+                elif self.acceleration_speed < 0.8 and keyboard[pygame.K_2]:
                     self.acceleration_speed += 0.06
                     self.deceleration_speed += 0.03
                     used_level = True
-                elif keyboard[K_3]:
+                elif keyboard[pygame.K_3]:
                     self.lives += 1
                     used_level = True
 
@@ -382,7 +381,12 @@ class Thruster(pygame.sprite.Sprite):
         keyboard = pygame.key.get_pressed()
 
         # Visibility
-        if keyboard[K_w] or keyboard[K_s] or keyboard[K_a] or keyboard[K_d]:
+        if (
+            keyboard[pygame.K_w]
+            or keyboard[pygame.K_s]
+            or keyboard[pygame.K_a]
+            or keyboard[pygame.K_d]
+        ):
             if not self.visibility:
                 self.visibility = True
         else:
@@ -1045,7 +1049,7 @@ def fire_bullet(
     keyboard = pygame.key.get_pressed()
 
     if player.bullet_delay <= 0:
-        if keyboard[K_SPACE]:
+        if keyboard[pygame.K_SPACE]:
             bullet = Bullet(
                 player.get_angle(), player.get_pos(), "bullet.png", (4, 24), 25
             )
@@ -1717,6 +1721,7 @@ def main():
 
     time_elapsed = 0
     paused_time = 0
+    start_pause_time = 0
 
     ## Groups
 
@@ -1832,7 +1837,7 @@ def main():
         ## Events
 
         for event in pygame.event.get():
-            if event.type == QUIT:
+            if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
