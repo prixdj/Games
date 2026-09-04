@@ -4,6 +4,17 @@
 # Version: 0.2.2
 # Description: A game like asteroids and vampire survivors
 
+## Takeaways for Future Projects
+
+# Use a base sprite class
+# Have a class for the game, storing score and other stuff
+# Use math.isclose for better float comparison
+# Use more general classes to avoid repetition in docstrings
+# Define an OS path
+# Start with correct file layout and function passing instead of global variables
+# Add sprites to groups as they are created (usually)
+
+
 ## Improvements
 
 # Controls screen
@@ -194,6 +205,42 @@ class Player(pygame.sprite.Sprite):
         self.bullet_holdoff = 50
         self.bullet_delay = 0
 
+    def reset(self) -> None:
+        """Resets all player stats."""
+
+        self.x = WIDTH / 2
+        self.y = HEIGHT / 2
+        self.angle = 90.0
+
+        self.acceleration_up = 0.0
+        self.acceleration_down = 0.0
+        self.acceleration_left = 0.0
+        self.acceleration_right = 0.0
+
+        self.MAX_ACCELERATION_UP = 5.0
+        self.MAX_ACCELERATION_DOWN = 5.0
+        self.MAX_ACCELERATION_LEFT = 5.0
+        self.MAX_ACCELERATION_RIGHT = 5.0
+
+        self.acceleration_speed = 0.2
+        self.deceleration_speed = 0.1
+
+        self.lives = 3
+        self.immune = False
+        self.immune_timer = 0
+        self.IMMUNE_TIMEOUT = FPS * 2
+
+        self.experience = 0
+
+        self.level = 1
+        self.levels_used = 1
+        self.LEVEL_UP_THRESHOLD = 40
+        self.LEVEL_HOLDOFF = 10
+        self.level_delay = 0
+
+        self.bullet_holdoff = 50
+        self.bullet_delay = 0
+
     def get_angle(self) -> float:
         """Returns the angle of the player.
 
@@ -211,6 +258,11 @@ class Player(pygame.sprite.Sprite):
         x = self.x
         y = self.y
         return (x, y)
+
+    def fix_neg_speed(self, accel_name: str) -> None:
+        """Fixes issues with how the acceleration is stored, preventing negative values."""
+        if getattr(self, accel_name) < 0.0:
+            setattr(self, accel_name, 0.0)
 
     def set_vulnerable(self) -> None:
         """Sets the immune state of the player to False."""
@@ -249,54 +301,19 @@ class Player(pygame.sprite.Sprite):
     def calc_movement(self) -> None:  # Should not trigger if the game state is paused
         """Calculates the movement of the player and updates the player's coordinates."""
         # Decelerate
-        if self.acceleration_up > 0.0:
-            self.acceleration_up -= self.deceleration_speed
-        if self.acceleration_down > 0.0:
-            self.acceleration_down -= self.deceleration_speed
-        if self.acceleration_left > 0.0:
-            self.acceleration_left -= self.deceleration_speed
-        if self.acceleration_right > 0.0:
-            self.acceleration_right -= self.deceleration_speed
+        for accel in [
+            "acceleration_up",
+            "acceleration_down",
+            "acceleration_left",
+            "acceleration_right",
+        ]:
+            if getattr(self, accel) > 0.0:
+                setattr(self, accel, getattr(self, accel) - self.deceleration_speed)
+                self.fix_neg_speed(accel)
 
         # Calculate movement
         self.x += self.acceleration_right - self.acceleration_left
         self.y += self.acceleration_down - self.acceleration_up
-
-    def reset(self) -> None:
-        """Resets all player stats."""
-
-        self.x = WIDTH / 2
-        self.y = HEIGHT / 2
-        self.angle = 90.0
-
-        self.acceleration_up = 0.0
-        self.acceleration_down = 0.0
-        self.acceleration_left = 0.0
-        self.acceleration_right = 0.0
-
-        self.MAX_ACCELERATION_UP = 5.0
-        self.MAX_ACCELERATION_DOWN = 5.0
-        self.MAX_ACCELERATION_LEFT = 5.0
-        self.MAX_ACCELERATION_RIGHT = 5.0
-
-        self.acceleration_speed = 0.2
-        self.deceleration_speed = 0.1
-
-        self.lives = 3
-        self.immune = False
-        self.immune_timer = 0
-        self.IMMUNE_TIMEOUT = FPS * 2
-
-        self.experience = 0
-
-        self.level = 1
-        self.levels_used = 1
-        self.LEVEL_UP_THRESHOLD = 40
-        self.LEVEL_HOLDOFF = 10
-        self.level_delay = 0
-
-        self.bullet_holdoff = 50
-        self.bullet_delay = 0
 
     def update(self):
         """Updates the player's level, powers and keeps the object on screen."""
@@ -986,16 +1003,18 @@ def rotate_object(obj) -> None:
 
 def add_sprite_to_groups(
     sprite: pygame.sprite.Sprite,
+    group: pygame.sprite.Group | pygame.sprite.LayeredUpdates,
     *groups: pygame.sprite.Group | pygame.sprite.LayeredUpdates,
 ) -> None:
     """Adds the sprite to each provided group.
 
     Args:
         sprite (pygame.sprite.Sprite): A pygame sprite.
-        *groups (pygame.sprite.Group | pygame.sprite.LayeredUpdates): Some number of sprite groups.
+        group (pygame.sprite.Group | pygame.sprite.LayeredUpdates): An arbitrary sprite group.
+        *groups (pygame.sprite.Group | pygame.sprite.LayeredUpdates): Some extra number of sprite groups.
     """
-    for group in groups:
-        group.add(sprite)
+    for sprite_group in (group,) + groups:
+        sprite_group.add(sprite)
 
 
 def remove_sprite_from_groups(
@@ -1091,23 +1110,6 @@ def display_wave_clear(
         f"Wave {wave} Cleared", "kenvector_future_thin", 60, "center", (300, 280)
     )
     add_sprite_to_groups(wave_clear, all_sprites, text_sprites, wave_clear_sprites)
-
-
-def remove_wave_clear(
-    wave_clear_sprites: pygame.sprite.Group,
-    all_sprites: pygame.sprite.LayeredUpdates,
-    text_sprites: pygame.sprite.Group,
-) -> None:
-    """Removes the sprites in the wave clear sprites group from all sprite groups.
-
-    Args:
-        wave_clear_sprites (pygame.sprite.Group): The wave clear sprites group.
-        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
-        text_sprites (pygame.sprite.Group): The text sprites group.
-    """
-    for text in wave_clear_sprites.sprites():
-        remove_sprite_from_groups(text, all_sprites, text_sprites, wave_clear_sprites)
-        text.kill()
 
 
 def spawn_enemies(
@@ -1208,7 +1210,7 @@ def spawn_waves(
             enemy_wave = calc_wave(wave_value)
             spawn_enemies(enemy_wave, all_sprites, enemy_sprites)
 
-            remove_wave_clear(wave_clear_sprites, all_sprites, text_sprites)
+            kill_sprite_group(wave_clear_sprites)
             change_enemy_likelihoods()
             wave_value += 10
             wave += 1
@@ -1287,6 +1289,20 @@ def remove_main_screen(
             remove_sprite_from_groups(
                 sprite, all_sprites, user_interface_sprites, main_screen_sprites
             )
+
+
+def kill_sprite_group(
+    sprite_group: pygame.sprite.Group, *sprite_groups: pygame.sprite.Group
+) -> None:
+    """Kills all sprites in a sprite group.
+
+    Args:
+        sprite_group (pygame.sprite.Group): An arbitrary sprite group.
+        *sprite_group (pygame.sprite.Group): Some extra number of sprite groups.
+    """
+    for group in (sprite_group,) + sprite_groups:
+        for sprite in group:
+            sprite.kill()
 
 
 def display_background(
@@ -1563,31 +1579,6 @@ def display_powers(
 
     add_sprite_to_groups(health_power, all_sprites, power_sprites)
     add_sprite_to_groups(health_text, all_sprites, text_sprites, power_up_text_sprites)
-
-
-def remove_powers(
-    power_sprites: pygame.sprite.Group,
-    power_up_text_sprites: pygame.sprite.Group,
-    all_sprites: pygame.sprite.LayeredUpdates,
-    text_sprites: pygame.sprite.Group,
-) -> None:
-    """Removes all sprites in the power sprites group and the power up text sprites group from their groups.
-
-    Args:
-        power_sprites (pygame.sprite.Group): The power sprites group.
-        power_up_text_sprites (pygame.sprite.Group): The power up text sprites group.
-        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
-        text_sprites (pygame.sprite.Group): The text sprites group.
-    """
-    for power in power_sprites.sprites():
-        remove_sprite_from_groups(power, all_sprites, power_sprites)
-        power.kill()
-
-    for text in power_up_text_sprites.sprites():
-        remove_sprite_from_groups(
-            text, all_sprites, text_sprites, power_up_text_sprites
-        )
-        text.kill()
 
 
 def display_end_screen(
@@ -1876,9 +1867,6 @@ def main():
                 player.set_vulnerable()
 
             if event.type == ENEMY_HIT:
-                remove_sprite_from_groups(
-                    event.bullet, all_sprites, player_bullet_sprites
-                )
                 event.bullet.kill()
                 if event.enemy.hp > 1:
                     event.enemy.hp -= 1
@@ -1886,7 +1874,6 @@ def main():
                     enemy_pos = event.enemy.get_pos()
                     hitmarker = Hitmarker(enemy_pos)
                     add_sprite_to_groups(hitmarker, all_sprites, hitmarker_sprites)
-                    remove_sprite_from_groups(event.enemy, all_sprites, enemy_sprites)
                     event.enemy.kill()
                     score = update_stats(player, score)
                     score_text.update_words(str(score))
@@ -1917,9 +1904,8 @@ def main():
                     )
 
             if event.type == LEVEL_UP_COMPLETE:
-                remove_powers(
-                    power_sprites, power_up_text_sprites, all_sprites, text_sprites
-                )
+                lives_text.update_words(str(player.lives))
+                kill_sprite_group(power_sprites, power_up_text_sprites)
 
             if event.type == GAME_OVER:
                 game_state, previous_game_state = update_game_state(
@@ -1948,6 +1934,8 @@ def main():
                     game_state, previous_game_state, "in_game"
                 )
 
+                start_game_time = pygame.time.get_ticks() / 1000
+
                 score = 0
 
                 wave_value = 10
@@ -1957,12 +1945,19 @@ def main():
                 time_elapsed = 0
                 paused_time = 0
 
-                player.x = 300.0
-                player.y = 300.0
+                player.reset()
+                lives_text.update_words(str(player.lives))
+                score_text.update_words(str(score))
 
-                paused_time = 0
+                kill_sprite_group(
+                    enemy_sprites,
+                    player_bullet_sprites,
+                    enemy_bullet_sprites,
+                    power_sprites,
+                    power_up_text_sprites,
+                )
 
-                enemy_sprites.empty()
+                enemy_num_text.update_words(str(len(enemy_sprites)))
 
                 remove_end_screen(
                     end_screen_sprites,
@@ -2034,6 +2029,13 @@ def main():
                     print(player.level)
                 if event.key == pygame.K_o:
                     print(player.angle)
+                if event.key == pygame.K_m:
+                    print("left", player.acceleration_left)
+                    print("right", player.acceleration_right)
+                    print("up", player.acceleration_up)
+                    print("down", player.acceleration_down)
+                    print("x", player.x)
+                    print("y", player.y)
 
         ## Main game functions
 
@@ -2154,7 +2156,6 @@ def main():
         for hitmarker in hitmarker_sprites.sprites():
             hitmarker.update_time()
             if hitmarker.check_timeout():
-                remove_sprite_from_groups(hitmarker, all_sprites, hitmarker_sprites)
                 hitmarker.kill()
 
         ## Updating objects
