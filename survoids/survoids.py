@@ -1,7 +1,7 @@
 # Author: prixdj
 # Date created: 15/02/2026
-# Date updated: 03/09/2026
-# Version: 0.2.2
+# Date updated: 06/11/2026
+# Version: 0.3.1
 # Description: A game like asteroids and vampire survivors
 
 ## Takeaways for Future Projects
@@ -21,13 +21,13 @@
 
 ## Improvements
 
-# Previous runs thing
 # Controls screen
 # Boss enemy
 
 
 ## Imports
 
+import datetime
 import math
 import random as rand
 import sys
@@ -45,21 +45,27 @@ WAVE_HOLDOFF = 120
 
 ## Events
 
-START_GAME = pygame.event.custom_type()
 
-RETRY = pygame.event.custom_type()
+class CustomEvent:
+    START_GAME = pygame.event.custom_type()
 
-GAME_OVER = pygame.event.custom_type()
+    PREVIOUS_RUNS = pygame.event.custom_type()
 
-PLAYER_HIT = pygame.event.custom_type()
+    BACK_TO_MAIN = pygame.event.custom_type()
 
-IMMUNE_OFF = pygame.event.custom_type()
+    RETRY = pygame.event.custom_type()
 
-ENEMY_HIT = pygame.event.custom_type()
+    GAME_OVER = pygame.event.custom_type()
 
-LEVEL_UP = pygame.event.custom_type()
+    PLAYER_HIT = pygame.event.custom_type()
 
-LEVEL_UP_COMPLETE = pygame.event.custom_type()
+    IMMUNE_OFF = pygame.event.custom_type()
+
+    ENEMY_HIT = pygame.event.custom_type()
+
+    LEVEL_UP = pygame.event.custom_type()
+
+    LEVEL_UP_COMPLETE = pygame.event.custom_type()
 
 
 ## Layers
@@ -219,7 +225,7 @@ class Player(pygame.sprite.Sprite):
         self.experience = 0
 
         self.level = 1
-        self.levels_used = 1
+        self.levels_used = 0
         self.LEVEL_UP_THRESHOLD = 40
         self.LEVEL_HOLDOFF = 10
         self.level_delay = 0
@@ -273,7 +279,7 @@ class Player(pygame.sprite.Sprite):
         self.experience = 0
 
         self.level = 1
-        self.levels_used = 1
+        self.levels_used = 0
         self.level_delay = 0
 
         self.bullet_holdoff = 50
@@ -331,7 +337,7 @@ class Player(pygame.sprite.Sprite):
     def check_immunity(self) -> None:
         """Creates an IMMUNE_OFF event if the player's immunity has worn off."""
         if self.immune_timer >= self.IMMUNE_TIMEOUT:
-            pygame.event.post(pygame.event.Event(IMMUNE_OFF))
+            pygame.event.post(pygame.event.Event(CustomEvent.IMMUNE_OFF))
             self.immune_timer = 0
         else:
             self.update_immune_timer()
@@ -436,9 +442,9 @@ class Player(pygame.sprite.Sprite):
             self.level += 1
 
         # Power up
-        if self.level > self.levels_used:
+        if self.level > self.levels_used + 1:
             if self.level_delay <= 0:
-                pygame.event.post(pygame.event.Event(LEVEL_UP))
+                pygame.event.post(pygame.event.Event(CustomEvent.LEVEL_UP))
 
                 used_level = False
 
@@ -456,7 +462,7 @@ class Player(pygame.sprite.Sprite):
                 if used_level:
                     self.levels_used += 1
                     self.level_delay = self.LEVEL_HOLDOFF
-                    pygame.event.post(pygame.event.Event(LEVEL_UP_COMPLETE))
+                    pygame.event.post(pygame.event.Event(CustomEvent.LEVEL_UP_COMPLETE))
             else:
                 self.level_delay -= 1
 
@@ -1522,6 +1528,10 @@ def display_main_screen(
     play_text: Text,
     play_text_effect_2: Text,
     play_button: UserInterface,
+    runs_text_effect_1: Text,
+    runs_text: Text,
+    runs_text_effect_2: Text,
+    runs_button: UserInterface,
     all_sprites: pygame.sprite.LayeredUpdates,
     text_sprites: pygame.sprite.Group,
     user_interface_sprites: pygame.sprite.Group,
@@ -1535,6 +1545,10 @@ def display_main_screen(
         play_text (Text): The play text object.
         play_text_effect_2 (Text): The play text object's effect 2.
         play_button (UserInterface): The play button.
+        runs_text_effect_1 (Text): The runs text object's effect 1.
+        runs_text (Text): The runs text object.
+        runs_text_effect_2 (Text): The runs text object's effect 2.
+        runs_button (UserInterface): The runs button.
         all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
         text_sprites (pygame.sprite.Group): The text sprites group.
         user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
@@ -1554,6 +1568,24 @@ def display_main_screen(
 
     add_sprite_to_groups(
         play_button, all_sprites, user_interface_sprites, main_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        runs_button, all_sprites, user_interface_sprites, main_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        runs_text_effect_1, all_sprites, text_sprites, main_screen_sprites
+    )
+
+    add_sprite_to_groups(runs_text, all_sprites, text_sprites, main_screen_sprites)
+
+    add_sprite_to_groups(
+        runs_text_effect_2, all_sprites, text_sprites, main_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        runs_button, all_sprites, user_interface_sprites, main_screen_sprites
     )
 
 
@@ -1580,6 +1612,202 @@ def remove_main_screen(
             remove_sprite_from_groups(
                 sprite, all_sprites, user_interface_sprites, main_screen_sprites
             )
+
+
+def display_runs_screen(
+    back_text_effect_1: Text,
+    back_text: Text,
+    back_text_effect_2: Text,
+    back_button: UserInterface,
+    runs_title_text: Text,
+    runs_number: Text,
+    runs_date_text: Text,
+    runs_date_text_effect: Text,
+    runs_score_text: Text,
+    runs_score_number: Text,
+    runs_wave_text: Text,
+    runs_wave_number: Text,
+    runs_level_text: Text,
+    runs_level_number: Text,
+    runs_time_text: Text,
+    runs_time_number: Text,
+    left_arrow_button: UserInterface,
+    right_arrow_button: UserInterface,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    text_sprites: pygame.sprite.Group,
+    user_interface_sprites: pygame.sprite.Group,
+    runs_screen_sprites: pygame.sprite.Group,
+) -> None:
+    """Displays the previous runs screen objects.
+
+    Args:
+        back_text_effect_1 (Text): The back text object's effect 1.
+        back_text (Text): The back text object.
+        back_text_effect_2 (Text): The back text object's effect 2.
+        back_button (UserInterface): The back button.
+        runs_title_text (Text): The title of the previous runs screen.
+        runs_date_text (Text): The text for the date of the current run.
+        runs_date_text_effect (Text): The effect on the text for the date of the current run.
+        runs_score_text (Text): The text for the word score.
+        runs_score_number (Text): The text for the score of the current run.
+        runs_wave_text (Text): The text for the word wave.
+        runs_wave_number (Text): The text for the wave of the current run.
+        runs_level_text (Text): The text for the word level.
+        runs_level_number (Text): The text for the level of the current run.
+        runs_time_text (Text): The text for the words time elapsed.
+        runs_time_number (Text): The text for the time elapsed of the current run.
+        left_arrow_button (UserInterface): The left arrow button.
+        right_arrow_button (UserInterface): The right_arrow button.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+        user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
+        runs_screen_sprites (pygame.sprite.Group): The runs screen sprites group.
+    """
+    add_sprite_to_groups(
+        back_text_effect_1, all_sprites, text_sprites, runs_screen_sprites
+    )
+
+    add_sprite_to_groups(back_text, all_sprites, text_sprites, runs_screen_sprites)
+
+    add_sprite_to_groups(
+        back_text_effect_2, all_sprites, text_sprites, runs_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        back_button, all_sprites, user_interface_sprites, runs_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        runs_title_text, all_sprites, text_sprites, runs_screen_sprites
+    )
+
+    add_sprite_to_groups(runs_number, all_sprites, text_sprites, runs_screen_sprites)
+
+    add_sprite_to_groups(
+        runs_date_text_effect, all_sprites, text_sprites, runs_screen_sprites
+    )
+
+    add_sprite_to_groups(runs_date_text, all_sprites, text_sprites, runs_screen_sprites)
+
+    add_sprite_to_groups(
+        runs_score_text, all_sprites, text_sprites, runs_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        runs_score_number, all_sprites, text_sprites, runs_screen_sprites
+    )
+
+    add_sprite_to_groups(runs_wave_text, all_sprites, text_sprites, runs_screen_sprites)
+
+    add_sprite_to_groups(
+        runs_wave_number, all_sprites, text_sprites, runs_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        runs_level_text, all_sprites, text_sprites, runs_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        runs_level_number, all_sprites, text_sprites, runs_screen_sprites
+    )
+
+    add_sprite_to_groups(runs_time_text, all_sprites, text_sprites, runs_screen_sprites)
+
+    add_sprite_to_groups(
+        runs_time_number, all_sprites, text_sprites, runs_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        left_arrow_button, all_sprites, user_interface_sprites, runs_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        right_arrow_button, all_sprites, user_interface_sprites, runs_screen_sprites
+    )
+
+
+def remove_runs_screen(
+    runs_screen_sprites: pygame.sprite.Group,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    text_sprites: pygame.sprite.Group,
+    user_interface_sprites: pygame.sprite.Group,
+) -> None:
+    """Removes all sprites in the runs screen sprites group from their groups.
+
+    Args:
+        runs_screen_sprites (pygame.sprite.Group): The runs screen sprites group.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+        user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
+    """
+    for sprite in runs_screen_sprites.sprites():
+        if sprite in text_sprites:
+            remove_sprite_from_groups(
+                sprite, all_sprites, text_sprites, runs_screen_sprites
+            )
+        elif sprite in user_interface_sprites:
+            remove_sprite_from_groups(
+                sprite, all_sprites, user_interface_sprites, runs_screen_sprites
+            )
+
+
+def parse_previous_runs() -> list[dict[str, str]]:
+    """Parses the game_results.txt file and returns the results as a list."""
+    results = []
+    current_run = {}
+
+    with open("survoids/game_results.txt", "r") as file:
+        # skip first two lines
+        next(file)
+        next(file)
+
+        for line in file:
+            line_split = line.split(":")
+
+            if len(line_split) != 2:
+                continue
+
+            match line_split[0]:
+                case "Date" | "Score" | "Wave" | "Level":
+                    current_run[f"{line_split[0]}"] = line_split[1].strip()
+                case "Time elapsed":
+                    current_run[f"{line_split[0]}"] = line_split[1].strip()
+                    results.append(current_run)
+                    current_run = {}
+                case _:
+                    continue
+
+    return results
+
+
+def update_previous_runs_text(
+    previous_runs: list[dict[str, str]],
+    current_run: int,
+    runs_number: Text,
+    runs_date_text: Text,
+    runs_date_text_effect: Text,
+    runs_score_number: Text,
+    runs_wave_number: Text,
+    runs_level_number: Text,
+    runs_time_number: Text,
+) -> None:
+
+    if previous_runs:
+        runs_number.update_words(f"({str(current_run + 1)} / {str(len(previous_runs))})")
+        runs_date_text.update_words(previous_runs[current_run]["Date"])
+        runs_date_text_effect.update_words(previous_runs[current_run]["Date"])
+        runs_score_number.update_words(previous_runs[current_run]["Score"])
+        runs_wave_number.update_words(previous_runs[current_run]["Wave"])
+        runs_level_number.update_words(previous_runs[current_run]["Level"])
+        runs_time_number.update_words(previous_runs[current_run]["Time elapsed"])
+    else:
+        runs_number.update_words("(0/0)")
+        runs_date_text.update_words("NO RUNS COMPLETED")
+        runs_date_text_effect.update_words("NO RUNS COMPLETED")
+        runs_score_number.update_words("N/A")
+        runs_wave_number.update_words("N/A")
+        runs_level_number.update_words("N/A")
+        runs_time_number.update_words("N/A")
 
 
 def kill_sprite_group(
@@ -1969,14 +2197,11 @@ def store_game_info(score: int, level: int, wave: int, time_elapsed: float) -> N
     """
 
     with open("survoids/game_results.txt", "a") as game_results:
+        game_results.write(f"Date: {datetime.date.today()}\n")
         game_results.write(f"Score: {score}\n")
         game_results.write(f"Wave: {wave}\n")
         game_results.write(f"Level: {level}\n")
         game_results.write(f"Time elapsed: {time_elapsed:.2f}s\n\n")
-
-
-def display_previous_runs():
-    pass
 
 
 ## Main
@@ -2027,6 +2252,7 @@ def main():
     text_sprites = pygame.sprite.Group()
 
     main_screen_sprites = pygame.sprite.Group()
+    runs_screen_sprites = pygame.sprite.Group()
     pause_screen_sprites = pygame.sprite.Group()
     end_screen_sprites = pygame.sprite.Group()
 
@@ -2056,6 +2282,75 @@ def main():
     )
 
     play_button = UserInterface("button.png", 240, 78, (293, 295), True)
+
+    runs_text = Text("RUNS", "kenvector_future", 60, "midtop", (300, 360))
+
+    runs_text_effect_1 = Text(
+        "RUNS", "kenvector_future", 60, "midtop", (298, 358), (0, 0, 0)
+    )
+
+    runs_text_effect_2 = Text(
+        "RUNS", "kenvector_future", 60, "midtop", (301, 361), (0, 0, 0)
+    )
+
+    runs_button = UserInterface("button.png", 240, 78, (293, 395), True)
+
+    back_text = Text("BACK", "kenvector_future", 40, "topleft", (12, 5))
+
+    back_text_effect_1 = Text(
+        "BACK", "kenvector_future", 40, "topleft", (10, 3), (0, 0, 0)
+    )
+
+    back_text_effect_2 = Text(
+        "BACK", "kenvector_future", 40, "topleft", (13, 6), (0, 0, 0)
+    )
+
+    back_button = UserInterface("button.png", 142, 48, (74, 30), True)
+
+    runs_title_text = Text("RUNS", "kenvector_future", 70, "midtop", (300, 15))
+
+    runs_number = Text("", "kenvector_future", 25, "midtop", (300, 95))
+
+    runs_date_text = Text(
+        "", "kenvector_future_thin", 20, "topright", (575, 77), (255, 100, 110)
+    )
+
+    runs_date_text_effect = Text(
+        "", "kenvector_future_thin", 20, "topright", (573, 76), (255, 255, 255)
+    )
+
+    runs_score_text = Text(
+        "SCORE", "kenvector_future_thin", 30, "midtop", (300, 135), (130, 150, 255)
+    )
+
+    runs_score_number = Text("", "kenvector_future_thin", 55, "midtop", (300, 175))
+
+    runs_wave_text = Text(
+        "WAVE", "kenvector_future_thin", 30, "midtop", (300, 245), (130, 150, 255)
+    )
+
+    runs_wave_number = Text("", "kenvector_future_thin", 55, "midtop", (300, 285))
+
+    runs_level_text = Text(
+        "LEVEL", "kenvector_future_thin", 30, "midtop", (300, 355), (130, 150, 255)
+    )
+
+    runs_level_number = Text("", "kenvector_future_thin", 55, "midtop", (300, 395))
+
+    runs_time_text = Text(
+        "TIME ELAPSED",
+        "kenvector_future_thin",
+        30,
+        "midtop",
+        (300, 465),
+        (130, 150, 255),
+    )
+
+    runs_time_number = Text("", "kenvector_future_thin", 55, "midtop", (300, 505))
+
+    left_arrow_button = UserInterface("left_arrow.png", 66, 66, (46, 558), True)
+
+    right_arrow_button =  UserInterface("right_arrow.png", 66, 66, (558, 558), True)
 
     player = Player()
 
@@ -2125,237 +2420,391 @@ def main():
         ## Events
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+            match event.type:
+                case pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
 
-            if event.type == START_GAME:
-                remove_main_screen(
-                    main_screen_sprites,
-                    all_sprites,
-                    text_sprites,
-                    user_interface_sprites,
-                )
-                display_player(player, thruster, all_sprites)
-                display_user_interface(
-                    player_x_ui,
-                    player_life_icon,
-                    wave_num_text,
-                    wave_bar,
-                    enemy_icon,
-                    enemy_x_ui,
-                    enemy_num_text,
-                    lives_text,
-                    score_text,
-                    all_sprites,
-                    user_interface_sprites,
-                    wave_info_sprites,
-                    text_sprites,
-                    volume_meter_sprites,
-                )
-                game_state, previous_game_state = update_game_state(
-                    game_state, previous_game_state, "in_game"
-                )
-                start_game_time = pygame.time.get_ticks() / 1000
+                case CustomEvent.START_GAME:
+                    remove_main_screen(
+                        main_screen_sprites,
+                        all_sprites,
+                        text_sprites,
+                        user_interface_sprites,
+                    )
+                    display_player(player, thruster, all_sprites)
+                    display_user_interface(
+                        player_x_ui,
+                        player_life_icon,
+                        wave_num_text,
+                        wave_bar,
+                        enemy_icon,
+                        enemy_x_ui,
+                        enemy_num_text,
+                        lives_text,
+                        score_text,
+                        all_sprites,
+                        user_interface_sprites,
+                        wave_info_sprites,
+                        text_sprites,
+                        volume_meter_sprites,
+                    )
+                    game_state, previous_game_state = update_game_state(
+                        game_state, previous_game_state, "in_game"
+                    )
+                    start_game_time = pygame.time.get_ticks() / 1000
 
-            if event.type == IMMUNE_OFF:
-                if not player.star_buff_act:
+                    break
+
+                case CustomEvent.PREVIOUS_RUNS:
+                    remove_main_screen(
+                        main_screen_sprites,
+                        all_sprites,
+                        text_sprites,
+                        user_interface_sprites,
+                    )
+
+                    previous_runs = parse_previous_runs()
+                    current_run = 0
+
+                    update_previous_runs_text(
+                        previous_runs,
+                        current_run,
+                        runs_number,
+                        runs_date_text,
+                        runs_date_text_effect,
+                        runs_score_number,
+                        runs_wave_number,
+                        runs_level_number,
+                        runs_time_number,
+                    )
+
+                    game_state, previous_game_state = update_game_state(
+                        game_state, previous_game_state, "previous_runs"
+                    )
+
+                    break
+
+                case CustomEvent.BACK_TO_MAIN:
+                    remove_runs_screen(
+                        runs_screen_sprites,
+                        all_sprites,
+                        text_sprites,
+                        user_interface_sprites,
+                    )
+
+                    game_state, previous_game_state = update_game_state(
+                        game_state, previous_game_state, "main_screen"
+                    )
+
+                    break
+
+                case CustomEvent.IMMUNE_OFF:
+                    if not player.star_buff_act:
+                        player.image = player.NORMAL_IMAGE
+                        player.original_image = player.NORMAL_IMAGE
+                    player.set_vulnerable()
+
+                case CustomEvent.ENEMY_HIT:
+                    event.bullet.kill()
+                    event.enemy.hp -= player.damage
+                    if event.enemy.hp <= 0:
+                        enemy_pos = event.enemy.get_pos()
+                        hitmarker = Hitmarker(enemy_pos)
+                        add_sprite_to_groups(hitmarker, all_sprites, hitmarker_sprites)
+                        spawn_buff(
+                            event.enemy.buff_spawn_chance,
+                            enemy_pos,
+                            buff_sprites,
+                            all_sprites,
+                        )
+                        event.enemy.kill()
+                        score = update_stats(player, score)
+                        score_text.update_words(str(score))
+                        enemy_num_text.update_words(str(len(enemy_sprites)))
+
+                case CustomEvent.PLAYER_HIT:
+                    if (
+                        not player.immune and not player.star_buff_act
+                    ):  # not immune and doesn't have star invulnerability
+                        player.lives -= 1
+                        lives_text.update_words(str(player.lives))
+
+                        if check_game_over(player.lives):
+                            pygame.event.post(pygame.event.Event(CustomEvent.GAME_OVER))
+                            player.immune = True
+                        else:
+                            player.image = player.IMMUNE_IMAGE
+                            player.original_image = player.IMMUNE_IMAGE
+
+                            player.immune = True
+
+                case CustomEvent.LEVEL_UP:
+                    if not power_sprites:
+                        display_powers(
+                            player,
+                            all_sprites,
+                            power_sprites,
+                            text_sprites,
+                            power_up_text_sprites,
+                        )
+
+                case CustomEvent.LEVEL_UP_COMPLETE:
+                    lives_text.update_words(str(player.lives))
+                    kill_sprite_group(power_sprites, power_up_text_sprites)
+
+                case CustomEvent.GAME_OVER:
+                    game_state, previous_game_state = update_game_state(
+                        game_state, previous_game_state, "game_over"
+                    )
+                    time_elapsed = (
+                        pygame.time.get_ticks() / 1000 - start_game_time - paused_time
+                    )
+                    store_game_info(score, player.level, wave, time_elapsed)
+
+                    remove_pause_screen(
+                        pause_screen_sprites,
+                        all_sprites,
+                        screen_effect_sprites,
+                        text_sprites,
+                    )
+
+                    display_end_screen(
+                        end_screen,
+                        game_over_text,
+                        retry_button,
+                        retry_text_effect_1,
+                        retry_text,
+                        retry_text_effect_2,
+                        all_sprites,
+                        end_screen_sprites,
+                        screen_effect_sprites,
+                        text_sprites,
+                        user_interface_sprites,
+                    )
+
+                    break
+
+                case CustomEvent.RETRY:
+                    game_state, previous_game_state = update_game_state(
+                        game_state, previous_game_state, "in_game"
+                    )
+
+                    start_game_time = pygame.time.get_ticks() / 1000
+
+                    score = 0
+
+                    wave_value = 10
+                    wave = 0
+                    wave_delay = 0
+
+                    time_elapsed = 0
+                    paused_time = 0
+
+                    player.reset()
                     player.image = player.NORMAL_IMAGE
                     player.original_image = player.NORMAL_IMAGE
-                player.set_vulnerable()
 
-            if event.type == ENEMY_HIT:
-                event.bullet.kill()
-                event.enemy.hp -= player.damage
-                if event.enemy.hp <= 0:
-                    enemy_pos = event.enemy.get_pos()
-                    hitmarker = Hitmarker(enemy_pos)
-                    add_sprite_to_groups(hitmarker, all_sprites, hitmarker_sprites)
-                    spawn_buff(
-                        event.enemy.buff_spawn_chance,
-                        enemy_pos,
-                        buff_sprites,
-                        all_sprites,
-                    )
-                    event.enemy.kill()
-                    score = update_stats(player, score)
+                    lives_text.update_words(str(player.lives))
                     score_text.update_words(str(score))
+
+                    kill_sprite_group(
+                        enemy_sprites,
+                        player_bullet_sprites,
+                        enemy_bullet_sprites,
+                        power_sprites,
+                        power_up_text_sprites,
+                        buff_sprites,
+                    )
+
                     enemy_num_text.update_words(str(len(enemy_sprites)))
 
-            if event.type == PLAYER_HIT:
-                if (
-                    not player.immune and not player.star_buff_act
-                ):  # not immune and doesn't have star invulnerability
-                    player.lives -= 1
-                    lives_text.update_words(str(player.lives))
-
-                    if check_game_over(player.lives):
-                        pygame.event.post(pygame.event.Event(GAME_OVER))
-                        player.immune = True
-                    else:
-                        player.image = player.IMMUNE_IMAGE
-                        player.original_image = player.IMMUNE_IMAGE
-
-                        player.immune = True
-
-            if event.type == LEVEL_UP:
-                if not power_sprites:
-                    display_powers(
-                        player,
+                    remove_end_screen(
+                        end_screen_sprites,
                         all_sprites,
-                        power_sprites,
+                        screen_effect_sprites,
                         text_sprites,
-                        power_up_text_sprites,
+                        user_interface_sprites,
                     )
 
-            if event.type == LEVEL_UP_COMPLETE:
-                lives_text.update_words(str(player.lives))
-                kill_sprite_group(power_sprites, power_up_text_sprites)
+                    score_text.update_words(str(score))
+                    enemy_num_text.update_words(str(len(enemy_sprites)))
+                    wave_num_text.update_words(str(wave))
 
-            if event.type == GAME_OVER:
-                game_state, previous_game_state = update_game_state(
-                    game_state, previous_game_state, "game_over"
-                )
-                time_elapsed = (
-                    pygame.time.get_ticks() / 1000 - start_game_time - paused_time
-                )
-                store_game_info(score, player.level, wave, time_elapsed)
+                    break
 
-                remove_pause_screen(
-                    pause_screen_sprites,
-                    all_sprites,
-                    screen_effect_sprites,
-                    text_sprites,
-                )
+                case pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        if game_state == "main_screen":
+                            if check_mouse_click(play_button):
+                                play_button.change_clicked(True)
+                            if check_mouse_click(runs_button):
+                                runs_button.change_clicked(True)
+                        elif game_state == "previous_runs":
+                            if check_mouse_click(back_button):
+                                back_button.change_clicked(True)
+                            if check_mouse_click(left_arrow_button):
+                                left_arrow_button.change_clicked(True)
+                            if check_mouse_click(right_arrow_button):
+                                right_arrow_button.change_clicked(True)
+                        elif game_state == "game_over":
+                            if check_mouse_click(retry_button):
+                                retry_button.change_clicked(True)
 
-                display_end_screen(
-                    end_screen,
-                    game_over_text,
-                    retry_button,
-                    retry_text_effect_1,
-                    retry_text,
-                    retry_text_effect_2,
-                    all_sprites,
-                    end_screen_sprites,
-                    screen_effect_sprites,
-                    text_sprites,
-                    user_interface_sprites,
-                )
+                case pygame.MOUSEBUTTONUP:
+                    if event.button == 1:
+                        if game_state == "main_screen":
+                            if check_mouse_click(play_button):
+                                if play_button.clicked:
+                                    pygame.event.post(
+                                        pygame.event.Event(CustomEvent.START_GAME)
+                                    )
+                            else:
+                                play_button.change_clicked(False)
+                            if check_mouse_click(runs_button):
+                                if runs_button.clicked:
+                                    pygame.event.post(
+                                        pygame.event.Event(CustomEvent.PREVIOUS_RUNS)
+                                    )
+                            else:
+                                runs_button.change_clicked(False)
+                        elif game_state == "previous_runs":
+                            if check_mouse_click(back_button):
+                                if back_button.clicked:
+                                    pygame.event.post(
+                                        pygame.event.Event(CustomEvent.BACK_TO_MAIN)
+                                    )
+                            else:
+                                back_button.change_clicked(False)
+                            if check_mouse_click(left_arrow_button):
+                                if left_arrow_button.clicked:
+                                    if current_run > 0:
+                                        current_run -= 1
+                                        update_previous_runs_text(
+                                            previous_runs,
+                                            current_run,
+                                            runs_number,
+                                            runs_date_text,
+                                            runs_date_text_effect,
+                                            runs_score_number,
+                                            runs_wave_number,
+                                            runs_level_number,
+                                            runs_time_number,
+                                        )
+                            else:
+                                left_arrow_button.change_clicked(False)
+                            if check_mouse_click(right_arrow_button):
+                                if right_arrow_button.clicked:
+                                    if current_run < len(previous_runs) - 1:
+                                        current_run += 1
+                                        update_previous_runs_text(
+                                            previous_runs,
+                                            current_run,
+                                            runs_number,
+                                            runs_date_text,
+                                            runs_date_text_effect,
+                                            runs_score_number,
+                                            runs_wave_number,
+                                            runs_level_number,
+                                            runs_time_number,
+                                        )
+                            else:
+                                right_arrow_button.change_clicked(False)
+                        if game_state == "game_over":
+                            if check_mouse_click(retry_button):
+                                if retry_button.clicked:
+                                    pygame.event.post(
+                                        pygame.event.Event(CustomEvent.RETRY)
+                                    )
+                            else:
+                                retry_button.change_clicked(False)
 
-            if event.type == RETRY:
-                game_state, previous_game_state = update_game_state(
-                    game_state, previous_game_state, "in_game"
-                )
-
-                start_game_time = pygame.time.get_ticks() / 1000
-
-                score = 0
-
-                wave_value = 10
-                wave = 0
-                wave_delay = 0
-
-                time_elapsed = 0
-                paused_time = 0
-
-                player.reset()
-                lives_text.update_words(str(player.lives))
-                score_text.update_words(str(score))
-
-                kill_sprite_group(
-                    enemy_sprites,
-                    player_bullet_sprites,
-                    enemy_bullet_sprites,
-                    power_sprites,
-                    power_up_text_sprites,
-                )
-
-                enemy_num_text.update_words(str(len(enemy_sprites)))
-
-                remove_end_screen(
-                    end_screen_sprites,
-                    all_sprites,
-                    screen_effect_sprites,
-                    text_sprites,
-                    user_interface_sprites,
-                )
-
-                score_text.update_words(str(score))
-                enemy_num_text.update_words(str(len(enemy_sprites)))
-                wave_num_text.update_words(str(wave))
-
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    if game_state == "main_screen":
-                        if check_mouse_click(play_button):
-                            play_button.change_clicked(True)
-                    elif game_state == "game_over":
-                        if check_mouse_click(retry_button):
-                            retry_button.change_clicked(True)
-
-            if event.type == pygame.MOUSEBUTTONUP:
-                if event.button == 1:
-                    if game_state == "main_screen":
-                        if check_mouse_click(play_button):
-                            if play_button.clicked:
-                                pygame.event.post(pygame.event.Event(START_GAME))
-                        else:
-                            play_button.change_clicked(False)
-                    if game_state == "game_over":
-                        if check_mouse_click(retry_button):
-                            if retry_button.clicked:
-                                pygame.event.post(pygame.event.Event(RETRY))
-                        else:
-                            retry_button.change_clicked(False)
-
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    if game_state == "paused":
-                        game_state, previous_game_state = update_game_state(
-                            game_state, previous_game_state, previous_game_state
-                        )
-                        remove_pause_screen(
-                            pause_screen_sprites,
-                            all_sprites,
-                            screen_effect_sprites,
-                            text_sprites,
-                        )
-                        paused_time += pygame.time.get_ticks() / 1000 - start_pause_time
-                    elif game_state == "in_game":
-                        game_state, previous_game_state = update_game_state(
-                            game_state, previous_game_state, "paused"
-                        )
-                        start_pause_time = pygame.time.get_ticks() / 1000
-                # test keybinds
-                if event.key == pygame.K_4:
-                    player.lives = 0
-                if event.key == pygame.K_5:
-                    player.experience += 30
-                if event.key == pygame.K_6:
-                    print("game_state:", game_state)
-                    print("previous game state:", previous_game_state)
-                if event.key == pygame.K_7:
-                    pygame.event.post(pygame.event.Event(PLAYER_HIT))
-                if event.key == pygame.K_8:
-                    reset_game_results()
-                if event.key == pygame.K_9:
-                    print(player.level)
-                if event.key == pygame.K_o:
-                    print(player.angle)
-                if event.key == pygame.K_m:
-                    print("left", player.acceleration_left)
-                    print("right", player.acceleration_right)
-                    print("up", player.acceleration_up)
-                    print("down", player.acceleration_down)
-                    print("x", player.x)
-                    print("y", player.y)
-                if event.key == pygame.K_l:
-                    spawn_buff(
-                        100,
-                        (300.0, 300.0),
-                        buff_sprites,
-                        all_sprites,
-                    )
+                case pygame.KEYDOWN:
+                    match event.key:
+                        case pygame.K_ESCAPE:
+                            if game_state == "paused":
+                                game_state, previous_game_state = update_game_state(
+                                    game_state, previous_game_state, previous_game_state
+                                )
+                                remove_pause_screen(
+                                    pause_screen_sprites,
+                                    all_sprites,
+                                    screen_effect_sprites,
+                                    text_sprites,
+                                )
+                                paused_time += (
+                                    pygame.time.get_ticks() / 1000 - start_pause_time
+                                )
+                            elif game_state == "in_game":
+                                game_state, previous_game_state = update_game_state(
+                                    game_state, previous_game_state, "paused"
+                                )
+                                start_pause_time = pygame.time.get_ticks() / 1000
+                            elif game_state == "previous_runs":
+                                pygame.event.post(
+                                    pygame.event.Event(CustomEvent.BACK_TO_MAIN)
+                                )
+                        case pygame.K_LEFT | pygame.K_a:
+                            if game_state == "previous_runs":
+                                if current_run > 0:
+                                    current_run -= 1
+                                    update_previous_runs_text(
+                                        previous_runs,
+                                        current_run,
+                                        runs_number,
+                                        runs_date_text,
+                                        runs_date_text_effect,
+                                        runs_score_number,
+                                        runs_wave_number,
+                                        runs_level_number,
+                                        runs_time_number,
+                                    )
+                        case pygame.K_RIGHT | pygame.K_d:
+                            if current_run < len(previous_runs) - 1:
+                                current_run += 1
+                                update_previous_runs_text(
+                                    previous_runs,
+                                    current_run,
+                                    runs_number,
+                                    runs_date_text,
+                                    runs_date_text_effect,
+                                    runs_score_number,
+                                    runs_wave_number,
+                                    runs_level_number,
+                                    runs_time_number,
+                                )
+                        # test keybinds
+                        case pygame.K_4:
+                            player.lives = 0
+                        case pygame.K_5:
+                            player.experience += 30
+                        case pygame.K_6:
+                            print("game_state:", game_state)
+                            print("previous game state:", previous_game_state)
+                        case pygame.K_7:
+                            pygame.event.post(pygame.event.Event(CustomEvent.PLAYER_HIT))
+                        case pygame.K_8:
+                            reset_game_results()
+                        case pygame.K_9:
+                            print(player.level)
+                        case pygame.K_o:
+                            print(player.angle)
+                        case pygame.K_m:
+                            print("left", player.acceleration_left)
+                            print("right", player.acceleration_right)
+                            print("up", player.acceleration_up)
+                            print("down", player.acceleration_down)
+                            print("x", player.x)
+                            print("y", player.y)
+                        case pygame.K_l:
+                            spawn_buff(
+                                100,
+                                (rand.randint(250, 350), rand.randint(250, 350)),
+                                buff_sprites,
+                                all_sprites,
+                            )
+                        case pygame.K_u:
+                            kill_sprite_group(power_sprites, power_up_text_sprites)
 
         ## Main game functions
 
@@ -2372,12 +2821,41 @@ def main():
                         play_text,
                         play_text_effect_2,
                         play_button,
+                        runs_text_effect_1,
+                        runs_text,
+                        runs_text_effect_2,
+                        runs_button,
                         all_sprites,
                         text_sprites,
                         user_interface_sprites,
                         main_screen_sprites,
                     )
-                # display main screen with a play button for now can add other stuff later
+            case "previous_runs":
+                if not runs_screen_sprites:
+                    display_runs_screen(
+                        back_text_effect_1,
+                        back_text,
+                        back_text_effect_2,
+                        back_button,
+                        runs_title_text,
+                        runs_number,
+                        runs_date_text,
+                        runs_date_text_effect,
+                        runs_score_text,
+                        runs_score_number,
+                        runs_wave_text,
+                        runs_wave_number,
+                        runs_level_text,
+                        runs_level_number,
+                        runs_time_text,
+                        runs_time_number,
+                        left_arrow_button,
+                        right_arrow_button,
+                        all_sprites,
+                        text_sprites,
+                        user_interface_sprites,
+                        runs_screen_sprites,
+                    )
             case "paused":
                 if not pause_screen_sprites:
                     display_pause_screen(
@@ -2415,12 +2893,12 @@ def main():
                 if pygame.sprite.spritecollideany(
                     player, enemy_sprites, pygame.sprite.collide_rect_ratio(0.8)
                 ):
-                    pygame.event.post(pygame.event.Event(PLAYER_HIT))
+                    pygame.event.post(pygame.event.Event(CustomEvent.PLAYER_HIT))
 
                 if pygame.sprite.spritecollideany(
                     player, enemy_bullet_sprites, pygame.sprite.collide_rect_ratio(0.6)
                 ):
-                    pygame.event.post(pygame.event.Event(PLAYER_HIT))
+                    pygame.event.post(pygame.event.Event(CustomEvent.PLAYER_HIT))
 
                 player.move()
                 player.calc_movement()
@@ -2489,7 +2967,8 @@ def main():
             if bullet_collision:
                 pygame.event.post(
                     pygame.event.Event(
-                        ENEMY_HIT, {"enemy": enemy, "bullet": bullet_collision}
+                        CustomEvent.ENEMY_HIT,
+                        {"enemy": enemy, "bullet": bullet_collision},
                     )
                 )
 
