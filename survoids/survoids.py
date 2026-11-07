@@ -38,6 +38,7 @@
 
 import datetime
 import math
+import os
 import random as rand
 import sys
 
@@ -109,7 +110,7 @@ class Background(pygame.sprite.Sprite):
         """Initialises the background object."""
         super().__init__()
         self._layer = 0
-        self.image = pygame.image.load("survoids/images/blue.png")
+        self.image = pygame.image.load(get_path("images/blue.png"))
         self.image = pygame.transform.scale(self.image, (WIDTH, HEIGHT))
         self.rect = self.image.get_rect(center=(WIDTH / 2, HEIGHT / 2))
 
@@ -127,7 +128,7 @@ class Mouse(pygame.sprite.Sprite):
         """Initialises the mouse object."""
         super().__init__(*groups)
         self._layer = 10
-        self.image = pygame.image.load("survoids/images/crosshair.png").convert_alpha()
+        self.image = pygame.image.load(get_path("images/crosshair.png")).convert_alpha()
         self.surf = pygame.Surface((30, 33))
         self.rect = self.surf.get_rect()
 
@@ -182,15 +183,13 @@ class Player(pygame.sprite.Sprite):
         self._layer = 6
 
         self.scaled_size = (45, 37)
-        unscaled_image = pygame.image.load("survoids/images/player.png").convert_alpha()
-        unscaled_IMMUNE_IMAGE = pygame.image.load(
-            "survoids/images/player_immune.png"
+        unscaled_image = pygame.image.load(get_path("images/player.png")).convert_alpha()
+        unscaled_IMMUNE_IMAGE = pygame.image.load(get_path("images/player_immune.png")).convert_alpha()
+        unscaled_INVULN_IMAGE_1 = pygame.image.load(get_path(
+            "images/player_star_invuln_1.png")
         ).convert_alpha()
-        unscaled_INVULN_IMAGE_1 = pygame.image.load(
-            "survoids/images/player_star_invuln_1.png"
-        ).convert_alpha()
-        unscaled_INVULN_IMAGE_2 = pygame.image.load(
-            "survoids/images/player_star_invuln_2.png"
+        unscaled_INVULN_IMAGE_2 = pygame.image.load(get_path(
+            "images/player_star_invuln_2.png")
         ).convert_alpha()
         self.image = pygame.transform.scale(unscaled_image, self.scaled_size)
         self.NORMAL_IMAGE = pygame.transform.scale(unscaled_image, self.scaled_size)
@@ -548,8 +547,8 @@ class Thruster(pygame.sprite.Sprite):
         """Initialises the thruster object."""
         super().__init__()
         self._layer = 5
-        self.image = pygame.image.load("survoids/images/thruster.png").convert_alpha()
-        self.original_image = pygame.image.load("survoids/images/thruster.png")
+        self.image = pygame.image.load(get_path("images/thruster.png")).convert_alpha()
+        self.original_image = pygame.image.load(get_path("images/thruster.png"))
         self.surf = pygame.Surface((14, 31))
         self.rect = self.surf.get_rect()
         self.OFFSET = 30
@@ -607,7 +606,7 @@ class Bullet(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 1
 
-        unscaled_image = pygame.image.load(f"survoids/images/{img}").convert_alpha()
+        unscaled_image = pygame.image.load(get_path(f"images/{img}")).convert_alpha()
         self.image = pygame.transform.scale(unscaled_image, size)
         self.original_image = pygame.transform.scale(unscaled_image, size)
         self.surf = pygame.Surface(size)
@@ -783,7 +782,7 @@ class Enemy(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 2
 
-        unscaled_image = pygame.image.load(f"survoids/images/{img}").convert_alpha()
+        unscaled_image = pygame.image.load(get_path(f"images/{img}")).convert_alpha()
         self.image = pygame.transform.scale(unscaled_image, size)
         self.original_image = pygame.transform.scale(unscaled_image, size)
         self.surf = pygame.Surface(size)
@@ -962,7 +961,7 @@ class Hitmarker(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 4
 
-        self.image = pygame.image.load("survoids/images/hit_marker.png").convert_alpha()
+        self.image = pygame.image.load(get_path("images/hit_marker.png")).convert_alpha()
         self.surf = pygame.Surface((37, 37))
         self.rect = self.surf.get_rect(center=tuple(map(lambda x: round(x), pos)))
 
@@ -1003,7 +1002,7 @@ class Power(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 7
 
-        self.image = pygame.image.load(f"survoids/images/{image}").convert_alpha()
+        self.image = pygame.image.load(get_path(f"images/{image}")).convert_alpha()
         self.surf = pygame.Surface((37, 37))
         self.rect = self.surf.get_rect(center=pos)
 
@@ -1036,7 +1035,7 @@ class Buff(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 3
 
-        self.image = pygame.image.load(f"survoids/images/{image}").convert_alpha()
+        self.image = pygame.image.load(get_path(f"images/{image}")).convert_alpha()
         self.surf = pygame.Surface(img_size)
         self.rect = self.surf.get_rect(center=pos)
 
@@ -1151,7 +1150,7 @@ class Text(pygame.sprite.Sprite):
         self.pos = pos
         self.colour = colour
 
-        self.font = pygame.font.Font(f"survoids/fonts/{font_name}.ttf", font_size)
+        self.font = pygame.font.Font(get_path(f"fonts/{font_name}.ttf"), font_size)
         self.surf = self.font.render(self.words, True, self.colour)
         self.rect = self.surf.get_rect()
 
@@ -1215,7 +1214,7 @@ class UserInterface(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 7
 
-        self.image = pygame.image.load(f"survoids/images/{img}").convert_alpha()
+        self.image = pygame.image.load(get_path(f"images/{img}")).convert_alpha()
 
         if scale:
             self.image = pygame.transform.scale(self.image, (width, height))
@@ -1262,6 +1261,19 @@ class ScreenEffect(pygame.sprite.Sprite):
 
 
 ## Functions
+
+def get_path(relative_path: str) -> str:
+    """Returns the actual path of the file.
+
+    Args:
+        relative_path (str): The relative file path.
+
+    Returns:
+        str: The actual path of the file.
+    """
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path) # type: ignore
+    return os.path.join(os.path.abspath("."), relative_path)
 
 
 def calculate_angle_between_points(p1, p2) -> float:
@@ -1865,7 +1877,7 @@ def parse_previous_runs() -> list[dict[str, str]]:
     results = []
     current_run = {}
 
-    with open("survoids/game_results.txt", "r") as file:
+    with open(get_path("game_results.txt"), "r") as file:
         # skip first two lines
         next(file)
         next(file)
@@ -2078,7 +2090,7 @@ def parse_controls() -> dict[str, str]:
     """Parse the controls from controls.txt."""
     controls = {}
 
-    with open("survoids/controls.txt", "r") as file:
+    with open(get_path("controls.txt"), "r") as file:
         # skip first two lines
         next(file)
         next(file)
@@ -2103,7 +2115,7 @@ def write_new_control(control_name: str, new_control_word: str) -> None:
     """
     file_lines = ""
 
-    with open("survoids/controls.txt", "r") as file:
+    with open(get_path("controls.txt"), "r") as file:
         file_lines = file.readlines()
 
     for line_num in range(len(file_lines)):
@@ -2111,13 +2123,13 @@ def write_new_control(control_name: str, new_control_word: str) -> None:
             file_lines[line_num] = f"{control_name}: {new_control_word}\n"
             break
 
-    with open("survoids/controls.txt", "w") as file:
+    with open(get_path("controls.txt"), "w") as file:
         file.writelines(file_lines)
 
 
 def reset_controls_file() -> None:
     """Resets the controls.txt file."""
-    with open("survoids/controls.txt", "w") as file:
+    with open(get_path("controls.txt"), "w") as file:
         file.write("This is the text file where the controls are saved.\n\n")
         file.write("Up: w")
         file.write("Down: w")
@@ -2488,7 +2500,7 @@ def remove_end_screen(
 
 def reset_game_results() -> None:
     """Resets the game_results.txt file."""
-    with open("survoids/game_results.txt", "w") as game_results:
+    with open(get_path("game_results.txt"), "w") as game_results:
         game_results.write("This is the text file where game data is saved.\n\n")
 
 
@@ -2502,7 +2514,7 @@ def store_game_info(score: int, level: int, wave: int, time_elapsed: float) -> N
         time_elapsed (float): The number of ticks elapsed in game.
     """
 
-    with open("survoids/game_results.txt", "a") as game_results:
+    with open(get_path("game_results.txt"), "a") as game_results:
         game_results.write(f"Date: {datetime.date.today()}\n")
         game_results.write(f"Score: {score}\n")
         game_results.write(f"Wave: {wave}\n")
