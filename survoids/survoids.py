@@ -26,10 +26,11 @@
 # Make text more unique
 # Make exp drop and be collected / move towards the player
 # Use more @'s and _'s for functions to properly define them
-# Better scaling
+# Better scaling, i.e. exponential
 # Better hitboxes
 # More enemies
 # Changing image of the player as a setting
+# Make offscreen powerups reachable
 # Much more
 
 
@@ -3291,44 +3292,44 @@ def main():
                                         runs_time_number,
                                     )
                         # test keybinds
-                        case pygame.K_4:
-                            player.lives = 0
-                        case pygame.K_5:
-                            player.experience += 30
-                        case pygame.K_6:
-                            print("game_state:", game_state)
-                            print("previous game state:", previous_game_state)
-                        case pygame.K_7:
-                            pygame.event.post(
-                                pygame.event.Event(CustomEvent.PLAYER_HIT)
-                            )
-                        case pygame.K_8:
-                            reset_game_results()
-                        case pygame.K_9:
-                            print(player.level)
-                        case pygame.K_o:
-                            print(player.angle)
-                        case pygame.K_m:
-                            print("left", player.acceleration_left)
-                            print("right", player.acceleration_right)
-                            print("up", player.acceleration_up)
-                            print("down", player.acceleration_down)
-                            print("x", player.x)
-                            print("y", player.y)
-                        case pygame.K_l:
-                            spawn_buff(
-                                100,
-                                (rand.randint(250, 350), rand.randint(250, 350)),
-                                buff_sprites,
-                                all_sprites,
-                            )
-                        case pygame.K_u:
-                            spawn_enemies(
-                                [EnemyBoss],
-                                all_sprites,
-                                enemy_sprites,
-                                volume_meter_sprites,
-                            )
+                        # case pygame.K_4:
+                        #     player.lives = 0
+                        # case pygame.K_5:
+                        #     player.experience += 30
+                        # case pygame.K_6:
+                        #     print("game_state:", game_state)
+                        #     print("previous game state:", previous_game_state)
+                        # case pygame.K_7:
+                        #     pygame.event.post(
+                        #         pygame.event.Event(CustomEvent.PLAYER_HIT)
+                        #     )
+                        # case pygame.K_8:
+                        #     reset_game_results()
+                        # case pygame.K_9:
+                        #     print(player.level)
+                        # case pygame.K_o:
+                        #     print(player.angle)
+                        # case pygame.K_m:
+                        #     print("left", player.acceleration_left)
+                        #     print("right", player.acceleration_right)
+                        #     print("up", player.acceleration_up)
+                        #     print("down", player.acceleration_down)
+                        #     print("x", player.x)
+                        #     print("y", player.y)
+                        # case pygame.K_l:
+                        #     spawn_buff(
+                        #         100,
+                        #         (rand.randint(250, 350), rand.randint(250, 350)),
+                        #         buff_sprites,
+                        #         all_sprites,
+                        #     )
+                        # case pygame.K_u:
+                        #     spawn_enemies(
+                        #         [EnemyBoss],
+                        #         all_sprites,
+                        #         enemy_sprites,
+                        #         volume_meter_sprites,
+                        #     )
 
         ## Main game functions
 
