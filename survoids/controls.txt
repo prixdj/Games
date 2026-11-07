@@ -1,0 +1,7 @@
+This is the text file where the controls are saved.
+
+Up: w
+Down: s
+Left: a
+Right: d
+Shoot: space
