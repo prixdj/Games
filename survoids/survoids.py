@@ -1,7 +1,7 @@
 # Author: prixdj
 # Date created: 15/02/2026
 # Date updated: 06/11/2026
-# Version: 0.3.1
+# Version: 0.3.2
 # Description: A game like asteroids and vampire survivors
 
 ## Takeaways for Future Projects
@@ -21,7 +21,6 @@
 
 ## Improvements
 
-# Controls screen
 # Boss enemy
 
 
@@ -50,6 +49,8 @@ class CustomEvent:
     START_GAME = pygame.event.custom_type()
 
     PREVIOUS_RUNS = pygame.event.custom_type()
+
+    CONTROLS = pygame.event.custom_type()
 
     BACK_TO_MAIN = pygame.event.custom_type()
 
@@ -397,21 +398,27 @@ class Player(pygame.sprite.Sprite):
             case "rpill_buff_":
                 self.damage = self.ORIG_DAMAGE
 
-    def move(self) -> None:  # Should only trigger if the game state is in_game
-        """Changes the acceleration values of the player."""
+    def move(
+        self, controls: dict[str, str]
+    ) -> None:  # Should only trigger if the game state is in_game
+        """Changes the acceleration values of the player.
+
+        Args:
+            controls (dict[str, str]): Dictionary containing the controls.
+        """
         keyboard = pygame.key.get_pressed()
 
         # Accelerate
-        if keyboard[pygame.K_w]:
+        if keyboard[pygame.key.key_code(controls["Up"])]:
             if self.acceleration_up < self.MAX_ACCELERATION_UP:
                 self.acceleration_up += self.acceleration_speed * self.accel_rate
-        if keyboard[pygame.K_s]:
+        if keyboard[pygame.key.key_code(controls["Down"])]:
             if self.acceleration_down < self.MAX_ACCELERATION_DOWN:
                 self.acceleration_down += self.acceleration_speed * self.accel_rate
-        if keyboard[pygame.K_a]:
+        if keyboard[pygame.key.key_code(controls["Left"])]:
             if self.acceleration_left < self.MAX_ACCELERATION_LEFT:
                 self.acceleration_left += self.acceleration_speed * self.accel_rate
-        if keyboard[pygame.K_d]:
+        if keyboard[pygame.key.key_code(controls["Right"])]:
             if self.acceleration_right < self.MAX_ACCELERATION_RIGHT:
                 self.acceleration_right += self.acceleration_speed * self.accel_rate
 
@@ -958,56 +965,6 @@ class BuffTypes:
     RedPill = BuffRedPill
 
 
-class UserInterface(pygame.sprite.Sprite):
-    """The user interface class.
-
-    Attributes:
-        image (surf): The image of the user interface object.
-        surf (surf): The surface of the user interface.
-        rect (rect): The rect of the user interface.
-        clicked (bool): The state of whether the user interface is being clicked or not.
-    """
-
-    def __init__(
-        self,
-        img: str,
-        width: float,
-        height: float,
-        pos: tuple[int, int],
-        scale: bool = False,
-    ):
-        """Initialises the user interface object.
-
-        Args:
-            img (str): The name of the user interface object including .png.
-            width (float): The width of the user interface object.
-            height (float): The height of the user interface object.
-            pos (tuple[int, int]): The position of the user interface on the screen.
-            scale (bool, optional): Whether the object should be scaled to the width and height or not. Defaults to False.
-        """
-        super().__init__()
-        self._layer = 7
-
-        self.image = pygame.image.load(f"survoids/images/{img}").convert_alpha()
-
-        if scale:
-            self.image = pygame.transform.scale(self.image, (width, height))
-
-        self.surf = pygame.Surface((width, height))
-        self.rect = self.surf.get_rect(center=pos)
-
-        self.clicked = False
-
-    def change_clicked(self, new_clicked: bool):
-        """Change the value of clicked to the new clicked value.
-
-        Args:
-            new_clicked (bool): The new value of clicked.
-        """
-        if self.clicked != new_clicked:
-            self.clicked = new_clicked
-
-
 class Text(pygame.sprite.Sprite):
     """The text class.
 
@@ -1029,6 +986,7 @@ class Text(pygame.sprite.Sprite):
         pos_type: str,
         pos: tuple[int, int],
         colour: tuple[int, int, int] = (255, 255, 255),
+        associated_word: str = "",
     ):
         """Initialises the text object.
 
@@ -1039,6 +997,7 @@ class Text(pygame.sprite.Sprite):
             pos_type (str): The type of position the text object is positioned by.
             pos (tuple[int, int]): The position of the text object.
             colour (tuple[int, int, int], optional): The RGB value of the colour of the text object. Defaults to (255, 255, 255).
+            associated_word (str, optional): The associated word. Defaults to an empty string.
         """
         super().__init__()
         self._layer = 8
@@ -1051,6 +1010,8 @@ class Text(pygame.sprite.Sprite):
         self.font = pygame.font.Font(f"survoids/fonts/{font_name}.ttf", font_size)
         self.surf = self.font.render(self.words, True, self.colour)
         self.rect = self.surf.get_rect()
+
+        self.associated_word = associated_word
 
         self.set_position()
 
@@ -1076,6 +1037,60 @@ class Text(pygame.sprite.Sprite):
         self.surf = self.font.render(self.words, True, self.colour)
         self.rect = self.surf.get_rect()
         self.set_position()
+
+
+class UserInterface(pygame.sprite.Sprite):
+    """The user interface class.
+
+    Attributes:
+        image (surf): The image of the user interface object.
+        surf (surf): The surface of the user interface.
+        rect (rect): The rect of the user interface.
+        clicked (bool): The state of whether the user interface is being clicked or not.
+    """
+
+    def __init__(
+        self,
+        img: str,
+        width: float,
+        height: float,
+        pos: tuple[int, int],
+        scale: bool = False,
+        associated_text: Text | None = None,
+    ):
+        """Initialises the user interface object.
+
+        Args:
+            img (str): The name of the user interface object including .png.
+            width (float): The width of the user interface object.
+            height (float): The height of the user interface object.
+            pos (tuple[int, int]): The position of the user interface on the screen.
+            scale (bool, optional): Whether the object should be scaled to the width and height or not. Defaults to False.
+            associated_text (Text | None, optional): The associated text object. Defaults to None.
+        """
+        super().__init__()
+        self._layer = 7
+
+        self.image = pygame.image.load(f"survoids/images/{img}").convert_alpha()
+
+        if scale:
+            self.image = pygame.transform.scale(self.image, (width, height))
+
+        self.surf = pygame.Surface((width, height))
+        self.rect = self.surf.get_rect(center=pos)
+
+        self.associated_text = associated_text
+
+        self.clicked = False
+
+    def change_clicked(self, new_clicked: bool):
+        """Change the value of clicked to the new clicked value.
+
+        Args:
+            new_clicked (bool): The new value of clicked.
+        """
+        if self.clicked != new_clicked:
+            self.clicked = new_clicked
 
 
 class VolumeMeter(pygame.sprite.Sprite):
@@ -1311,6 +1326,7 @@ def adjust_thruster(thruster: Thruster, player: Player) -> None:
 
 def fire_bullet(
     player: Player,
+    controls: dict[str, str],
     all_sprites: pygame.sprite.LayeredUpdates,
     bullet_sprites: pygame.sprite.Group,
 ) -> None:
@@ -1318,13 +1334,14 @@ def fire_bullet(
 
     Args:
         player (Player): The player object.
+        controls (dict[str, str]): Dictionary containing the controls.
         all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
         bullet_sprites (pygame.sprite.Group): The bullet sprites group for the bullet to be added to.
     """
     keyboard = pygame.key.get_pressed()
 
     if player.bullet_delay <= 0:
-        if keyboard[pygame.K_SPACE]:
+        if keyboard[pygame.key.key_code(controls["Shoot"])]:
             if not player.bpill_buff_act:
                 bullet = Bullet(
                     player.get_angle(), player.get_pos(), "bullet.png", (4, 24), 25
@@ -1532,6 +1549,10 @@ def display_main_screen(
     runs_text: Text,
     runs_text_effect_2: Text,
     runs_button: UserInterface,
+    controls_text_effect_1: Text,
+    controls_text: Text,
+    controls_text_effect_2: Text,
+    controls_button: UserInterface,
     all_sprites: pygame.sprite.LayeredUpdates,
     text_sprites: pygame.sprite.Group,
     user_interface_sprites: pygame.sprite.Group,
@@ -1549,6 +1570,10 @@ def display_main_screen(
         runs_text (Text): The runs text object.
         runs_text_effect_2 (Text): The runs text object's effect 2.
         runs_button (UserInterface): The runs button.
+        controls_text_effect_1 (Text): The controls text object's effect 1.
+        controls_text (Text): The controls text object.
+        controls_text_effect_2 (Text): The controls text object's effect 2.
+        controls_button (UserInterface): The controls button.
         all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
         text_sprites (pygame.sprite.Group): The text sprites group.
         user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
@@ -1571,10 +1596,6 @@ def display_main_screen(
     )
 
     add_sprite_to_groups(
-        runs_button, all_sprites, user_interface_sprites, main_screen_sprites
-    )
-
-    add_sprite_to_groups(
         runs_text_effect_1, all_sprites, text_sprites, main_screen_sprites
     )
 
@@ -1586,6 +1607,20 @@ def display_main_screen(
 
     add_sprite_to_groups(
         runs_button, all_sprites, user_interface_sprites, main_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        controls_text_effect_1, all_sprites, text_sprites, main_screen_sprites
+    )
+
+    add_sprite_to_groups(controls_text, all_sprites, text_sprites, main_screen_sprites)
+
+    add_sprite_to_groups(
+        controls_text_effect_2, all_sprites, text_sprites, main_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        controls_button, all_sprites, user_interface_sprites, main_screen_sprites
     )
 
 
@@ -1791,9 +1826,10 @@ def update_previous_runs_text(
     runs_level_number: Text,
     runs_time_number: Text,
 ) -> None:
-
     if previous_runs:
-        runs_number.update_words(f"({str(current_run + 1)} / {str(len(previous_runs))})")
+        runs_number.update_words(
+            f"({str(current_run + 1)} / {str(len(previous_runs))})"
+        )
         runs_date_text.update_words(previous_runs[current_run]["Date"])
         runs_date_text_effect.update_words(previous_runs[current_run]["Date"])
         runs_score_number.update_words(previous_runs[current_run]["Score"])
@@ -1822,6 +1858,197 @@ def kill_sprite_group(
     for group in (sprite_group,) + sprite_groups:
         for sprite in group:
             sprite.kill()
+
+
+def display_controls_screen(
+    back_text_effect_1: Text,
+    back_text: Text,
+    back_text_effect_2: Text,
+    back_button: UserInterface,
+    controls_title_text: Text,
+    up_control_button: UserInterface,
+    down_control_button: UserInterface,
+    left_control_button: UserInterface,
+    right_control_button: UserInterface,
+    shoot_control_button: UserInterface,
+    up_control_word: Text,
+    down_control_word: Text,
+    left_control_word: Text,
+    right_control_word: Text,
+    shoot_control_word: Text,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    text_sprites: pygame.sprite.Group,
+    user_interface_sprites: pygame.sprite.Group,
+    controls_screen_sprites: pygame.sprite.Group,
+):
+    """Displays the controls screen objects.
+
+    Args:
+        back_text_effect_1 (Text): The back text object's effect 1.
+        back_text (Text): The back text object.
+        back_text_effect_2 (Text): The back text object's effect 2.
+        back_button (UserInterface): The back button.
+        controls_title_text (Text): The controls screen title text.
+        up_control_button (UserInterface): The controls screen up button.
+        down_control_button (UserInterface): The controls screen down button.
+        left_control_button (UserInterface): The controls screen left button.
+        right_control_button (UserInterface): The controls screen right button.
+        shoot_control_button (UserInterface): The controls screen shoot button.
+        up_control_word (Text): The word for the up button.
+        down_control_word (Text): The word for the down button.
+        left_control_word (Text): The word for the left button.
+        right_control_word (Text): The word for the right button.
+        shoot_control_word (Text): The word for the shoot button.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+        user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
+        controls_screen_sprites (pygame.sprite.Group): The controls screen sprites group.
+    """
+    add_sprite_to_groups(
+        back_text_effect_1, all_sprites, text_sprites, controls_screen_sprites
+    )
+
+    add_sprite_to_groups(back_text, all_sprites, text_sprites, controls_screen_sprites)
+
+    add_sprite_to_groups(
+        back_text_effect_2, all_sprites, text_sprites, controls_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        back_button, all_sprites, user_interface_sprites, controls_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        controls_title_text, all_sprites, text_sprites, controls_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        up_control_button, all_sprites, user_interface_sprites, controls_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        down_control_button,
+        all_sprites,
+        user_interface_sprites,
+        controls_screen_sprites,
+    )
+
+    add_sprite_to_groups(
+        left_control_button,
+        all_sprites,
+        user_interface_sprites,
+        controls_screen_sprites,
+    )
+
+    add_sprite_to_groups(
+        right_control_button,
+        all_sprites,
+        user_interface_sprites,
+        controls_screen_sprites,
+    )
+
+    add_sprite_to_groups(
+        shoot_control_button,
+        all_sprites,
+        user_interface_sprites,
+        controls_screen_sprites,
+    )
+
+    add_sprite_to_groups(
+        up_control_word, all_sprites, text_sprites, controls_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        down_control_word, all_sprites, text_sprites, controls_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        left_control_word, all_sprites, text_sprites, controls_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        right_control_word, all_sprites, text_sprites, controls_screen_sprites
+    )
+
+    add_sprite_to_groups(
+        shoot_control_word, all_sprites, text_sprites, controls_screen_sprites
+    )
+
+
+def remove_controls_screen(
+    controls_screen_sprites: pygame.sprite.Group,
+    all_sprites: pygame.sprite.LayeredUpdates,
+    text_sprites: pygame.sprite.Group,
+    user_interface_sprites: pygame.sprite.Group,
+) -> None:
+    """Removes all sprites in the controls screen sprites group from their groups.
+
+    Args:
+        controls_screen_sprites (pygame.sprite.Group): The controls screen sprites group.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+        user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
+    """
+    for sprite in controls_screen_sprites.sprites():
+        if sprite in text_sprites:
+            remove_sprite_from_groups(
+                sprite, all_sprites, text_sprites, controls_screen_sprites
+            )
+        elif sprite in user_interface_sprites:
+            remove_sprite_from_groups(
+                sprite, all_sprites, user_interface_sprites, controls_screen_sprites
+            )
+
+
+def parse_controls() -> dict[str, str]:
+    """Parse the controls from controls.txt."""
+    controls = {}
+
+    with open("survoids/controls.txt", "r") as file:
+        # skip first two lines
+        next(file)
+        next(file)
+
+        for line in file:
+            line_split = line.split(":")
+
+            if len(line_split) != 2:  # if for some reason the line is blank
+                continue
+
+            controls[f"{line_split[0]}"] = line_split[1].strip()
+
+    return controls
+
+
+def write_new_control(control_name: str, new_control_word: str) -> None:
+    """Writes the new control to controls.txt.
+
+    Args:
+        control_name (str): The name of the control.
+        new_control_word (str): The new control word.
+    """
+    file_lines = ""
+
+    with open("survoids/controls.txt", "r") as file:
+        file_lines = file.readlines()
+
+    for line_num in range(len(file_lines)):
+        if file_lines[line_num][:len(control_name)] == control_name:
+            file_lines[line_num] = f"{control_name}: {new_control_word}\n"
+            break
+
+    with open("survoids/controls.txt", "w") as file:
+        file.writelines(file_lines)
+
+
+def reset_controls_file() -> None:
+    """Resets the controls.txt file."""
+    with open("survoids/controls.txt", "w") as file:
+        file.write("This is the text file where the controls are saved.\n\n")
+        file.write("Up: w")
+        file.write("Down: w")
+        file.write("Left: w")
+        file.write("Right: w")
 
 
 def display_background(
@@ -2234,6 +2461,9 @@ def main():
     paused_time = 0
     start_pause_time = 0
 
+    controls = parse_controls()
+    is_changing_control = False
+
     ## Groups
 
     all_sprites = pygame.sprite.LayeredUpdates()
@@ -2253,6 +2483,7 @@ def main():
 
     main_screen_sprites = pygame.sprite.Group()
     runs_screen_sprites = pygame.sprite.Group()
+    controls_screen_sprites = pygame.sprite.Group()
     pause_screen_sprites = pygame.sprite.Group()
     end_screen_sprites = pygame.sprite.Group()
 
@@ -2294,6 +2525,18 @@ def main():
     )
 
     runs_button = UserInterface("button.png", 240, 78, (293, 395), True)
+
+    controls_text = Text("CONTROLS", "kenvector_future", 32, "midtop", (300, 476))
+
+    controls_text_effect_1 = Text(
+        "CONTROLS", "kenvector_future", 32, "midtop", (298, 474), (0, 0, 0)
+    )
+
+    controls_text_effect_2 = Text(
+        "CONTROLS", "kenvector_future", 32, "midtop", (301, 477), (0, 0, 0)
+    )
+
+    controls_button = UserInterface("button.png", 240, 78, (293, 495), True)
 
     back_text = Text("BACK", "kenvector_future", 40, "topleft", (12, 5))
 
@@ -2350,7 +2593,79 @@ def main():
 
     left_arrow_button = UserInterface("left_arrow.png", 66, 66, (46, 558), True)
 
-    right_arrow_button =  UserInterface("right_arrow.png", 66, 66, (558, 558), True)
+    right_arrow_button = UserInterface("right_arrow.png", 66, 66, (558, 558), True)
+
+    controls_title_text = Text("CONTROLS", "kenvector_future", 40, "midtop", (300, 55))
+
+    up_control_word = Text(
+        controls['Up'],
+        "kenvector_future_thin",
+        55,
+        "midleft",
+        (272, 148),
+        (255, 255, 255),
+        "Up",
+    )
+
+    up_control_button = UserInterface(
+        "up_arrow.png", 66, 66, (136, 148), True, up_control_word
+    )
+
+    down_control_word = Text(
+        controls['Down'],
+        "kenvector_future_thin",
+        55,
+        "midleft",
+        (272, 238),
+        (255, 255, 255),
+        "Down",
+    )
+
+    down_control_button = UserInterface(
+        "down_arrow.png", 66, 66, (136, 238), True, down_control_word
+    )
+
+    left_control_word = Text(
+        controls['Left'],
+        "kenvector_future_thin",
+        55,
+        "midleft",
+        (272, 325),
+        (255, 255, 255),
+        "Left",
+    )
+
+    left_control_button = UserInterface(
+        "left_arrow.png", 66, 66, (136, 325), True, left_control_word
+    )
+
+    right_control_word = Text(
+        controls['Right'],
+        "kenvector_future_thin",
+        55,
+        "midleft",
+        (272, 415),
+        (255, 255, 255),
+        "Right",
+    )
+
+    right_control_button = UserInterface(
+        "right_arrow.png", 66, 66, (136, 415), True, right_control_word
+    )
+
+    shoot_control_word = Text(
+        controls['Shoot'],
+        "kenvector_future_thin",
+        55,
+        "midleft",
+        (272, 505),
+        (255, 255, 255),
+        "Shoot",
+    )
+
+    shoot_control_button = UserInterface(
+        "shoot_control.png", 66, 66, (136, 505), True, shoot_control_word
+    )
 
     player = Player()
 
@@ -2485,13 +2800,38 @@ def main():
 
                     break
 
-                case CustomEvent.BACK_TO_MAIN:
-                    remove_runs_screen(
-                        runs_screen_sprites,
+                case CustomEvent.CONTROLS:
+                    remove_main_screen(
+                        main_screen_sprites,
                         all_sprites,
                         text_sprites,
                         user_interface_sprites,
                     )
+
+                    game_state, previous_game_state = update_game_state(
+                        game_state, previous_game_state, "controls_screen"
+                    )
+
+                    break
+
+                case CustomEvent.BACK_TO_MAIN:
+                    match game_state:
+                        case "previous_runs":
+                            remove_runs_screen(
+                                runs_screen_sprites,
+                                all_sprites,
+                                text_sprites,
+                                user_interface_sprites,
+                            )
+                        case "controls_screen":
+                            remove_controls_screen(
+                                controls_screen_sprites,
+                                all_sprites,
+                                text_sprites,
+                                user_interface_sprites,
+                            )
+
+                            is_changing_control = False
 
                     game_state, previous_game_state = update_game_state(
                         game_state, previous_game_state, "main_screen"
@@ -2633,91 +2973,172 @@ def main():
 
                     break
 
+                case pygame.KEYDOWN if is_changing_control:
+                    for control in [up_control_button, down_control_button, left_control_button, right_control_button, shoot_control_button]:
+                        if control.clicked:
+                            if control.associated_text:
+                                controls[control.associated_text.associated_word] = pygame.key.name(event.key)
+                                control.associated_text.update_words(pygame.key.name(event.key))
+                                write_new_control(control.associated_text.associated_word, pygame.key.name(event.key))
+                                is_changing_control = False
+                                control.change_clicked(False)
+                            else:
+                                print("Could not find associated text for a control button.")
+
                 case pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
-                        if game_state == "main_screen":
-                            if check_mouse_click(play_button):
-                                play_button.change_clicked(True)
-                            if check_mouse_click(runs_button):
-                                runs_button.change_clicked(True)
-                        elif game_state == "previous_runs":
-                            if check_mouse_click(back_button):
-                                back_button.change_clicked(True)
-                            if check_mouse_click(left_arrow_button):
-                                left_arrow_button.change_clicked(True)
-                            if check_mouse_click(right_arrow_button):
-                                right_arrow_button.change_clicked(True)
-                        elif game_state == "game_over":
-                            if check_mouse_click(retry_button):
-                                retry_button.change_clicked(True)
+                        match game_state:
+                            case "main_screen":
+                                if check_mouse_click(play_button):
+                                    play_button.change_clicked(True)
+                                if check_mouse_click(runs_button):
+                                    runs_button.change_clicked(True)
+                                if check_mouse_click(controls_button):
+                                    controls_button.change_clicked(True)
+                            case "previous_runs":
+                                if check_mouse_click(back_button):
+                                    back_button.change_clicked(True)
+                                if check_mouse_click(left_arrow_button):
+                                    left_arrow_button.change_clicked(True)
+                                if check_mouse_click(right_arrow_button):
+                                    right_arrow_button.change_clicked(True)
+                            case "controls_screen":
+                                if check_mouse_click(back_button):
+                                    back_button.change_clicked(True)
+                                if check_mouse_click(up_control_button):
+                                    up_control_button.change_clicked(True)
+                                if check_mouse_click(down_control_button):
+                                    down_control_button.change_clicked(True)
+                                if check_mouse_click(left_control_button):
+                                    left_control_button.change_clicked(True)
+                                if check_mouse_click(right_control_button):
+                                    right_control_button.change_clicked(True)
+                                if check_mouse_click(shoot_control_button):
+                                    shoot_control_button.change_clicked(True)
+                            case "game_over":
+                                if check_mouse_click(retry_button):
+                                    retry_button.change_clicked(True)
 
                 case pygame.MOUSEBUTTONUP:
                     if event.button == 1:
-                        if game_state == "main_screen":
-                            if check_mouse_click(play_button):
-                                if play_button.clicked:
-                                    pygame.event.post(
-                                        pygame.event.Event(CustomEvent.START_GAME)
-                                    )
-                            else:
-                                play_button.change_clicked(False)
-                            if check_mouse_click(runs_button):
-                                if runs_button.clicked:
-                                    pygame.event.post(
-                                        pygame.event.Event(CustomEvent.PREVIOUS_RUNS)
-                                    )
-                            else:
-                                runs_button.change_clicked(False)
-                        elif game_state == "previous_runs":
-                            if check_mouse_click(back_button):
-                                if back_button.clicked:
-                                    pygame.event.post(
-                                        pygame.event.Event(CustomEvent.BACK_TO_MAIN)
-                                    )
-                            else:
-                                back_button.change_clicked(False)
-                            if check_mouse_click(left_arrow_button):
-                                if left_arrow_button.clicked:
-                                    if current_run > 0:
-                                        current_run -= 1
-                                        update_previous_runs_text(
-                                            previous_runs,
-                                            current_run,
-                                            runs_number,
-                                            runs_date_text,
-                                            runs_date_text_effect,
-                                            runs_score_number,
-                                            runs_wave_number,
-                                            runs_level_number,
-                                            runs_time_number,
+                        match game_state:
+                            case "main_screen":
+                                if check_mouse_click(play_button):
+                                    if play_button.clicked:
+                                        pygame.event.post(
+                                            pygame.event.Event(CustomEvent.START_GAME)
                                         )
-                            else:
-                                left_arrow_button.change_clicked(False)
-                            if check_mouse_click(right_arrow_button):
-                                if right_arrow_button.clicked:
-                                    if current_run < len(previous_runs) - 1:
-                                        current_run += 1
-                                        update_previous_runs_text(
-                                            previous_runs,
-                                            current_run,
-                                            runs_number,
-                                            runs_date_text,
-                                            runs_date_text_effect,
-                                            runs_score_number,
-                                            runs_wave_number,
-                                            runs_level_number,
-                                            runs_time_number,
+                                else:
+                                    play_button.change_clicked(False)
+                                if check_mouse_click(runs_button):
+                                    if runs_button.clicked:
+                                        pygame.event.post(
+                                            pygame.event.Event(
+                                                CustomEvent.PREVIOUS_RUNS
+                                            )
                                         )
-                            else:
-                                right_arrow_button.change_clicked(False)
-                        if game_state == "game_over":
-                            if check_mouse_click(retry_button):
-                                if retry_button.clicked:
-                                    pygame.event.post(
-                                        pygame.event.Event(CustomEvent.RETRY)
-                                    )
-                            else:
-                                retry_button.change_clicked(False)
+                                else:
+                                    runs_button.change_clicked(False)
+                                if check_mouse_click(controls_button):
+                                    if controls_button.clicked:
+                                        pygame.event.post(
+                                            pygame.event.Event(CustomEvent.CONTROLS)
+                                        )
+                                else:
+                                    controls_button.change_clicked(False)
+                            case "previous_runs":
+                                if check_mouse_click(back_button):
+                                    if back_button.clicked:
+                                        pygame.event.post(
+                                            pygame.event.Event(CustomEvent.BACK_TO_MAIN)
+                                        )
+                                else:
+                                    back_button.change_clicked(False)
+                                if check_mouse_click(left_arrow_button):
+                                    if left_arrow_button.clicked:
+                                        if current_run > 0:
+                                            current_run -= 1
+                                            update_previous_runs_text(
+                                                previous_runs,
+                                                current_run,
+                                                runs_number,
+                                                runs_date_text,
+                                                runs_date_text_effect,
+                                                runs_score_number,
+                                                runs_wave_number,
+                                                runs_level_number,
+                                                runs_time_number,
+                                            )
+                                else:
+                                    left_arrow_button.change_clicked(False)
+                                if check_mouse_click(right_arrow_button):
+                                    if right_arrow_button.clicked:
+                                        if current_run < len(previous_runs) - 1:
+                                            current_run += 1
+                                            update_previous_runs_text(
+                                                previous_runs,
+                                                current_run,
+                                                runs_number,
+                                                runs_date_text,
+                                                runs_date_text_effect,
+                                                runs_score_number,
+                                                runs_wave_number,
+                                                runs_level_number,
+                                                runs_time_number,
+                                            )
+                                else:
+                                    right_arrow_button.change_clicked(False)
+                            case "controls_screen":
+                                if check_mouse_click(back_button):
+                                    if back_button.clicked:
+                                        pygame.event.post(
+                                            pygame.event.Event(CustomEvent.BACK_TO_MAIN)
+                                        )
+                                else:
+                                    back_button.change_clicked(False)
+                                if check_mouse_click(up_control_button):
+                                    if up_control_button.clicked:
+                                        up_control_word.update_words("Listening")
+                                        is_changing_control = True
+                                else:
+                                    up_control_button.change_clicked(False)
+                                    up_control_word.update_words(controls["Up"])
+                                if check_mouse_click(down_control_button):
+                                    if down_control_button.clicked:
+                                        down_control_word.update_words("Listening")
+                                        is_changing_control = True
+                                else:
+                                    down_control_button.change_clicked(False)
+                                    down_control_word.update_words(controls["Down"])
+                                if check_mouse_click(left_control_button):
+                                    if left_control_button.clicked:
+                                        left_control_word.update_words("Listening")
+                                        is_changing_control = True
+                                else:
+                                    left_control_button.change_clicked(False)
+                                    left_control_word.update_words(controls["Left"])
+                                if check_mouse_click(right_control_button):
+                                    if right_control_button.clicked:
+                                        right_control_word.update_words("Listening")
+                                        is_changing_control = True
+                                else:
+                                    right_control_button.change_clicked(False)
+                                    right_control_word.update_words(controls["Right"])
+                                if check_mouse_click(shoot_control_button):
+                                    if shoot_control_button.clicked:
+                                        shoot_control_word.update_words("Listening")
+                                        is_changing_control = True
+                                else:
+                                    shoot_control_button.change_clicked(False)
+                                    shoot_control_word.update_words(controls["Shoot"])
+                            case "game_over":
+                                if check_mouse_click(retry_button):
+                                    if retry_button.clicked:
+                                        pygame.event.post(
+                                            pygame.event.Event(CustomEvent.RETRY)
+                                        )
+                                else:
+                                    retry_button.change_clicked(False)
 
                 case pygame.KEYDOWN:
                     match event.key:
@@ -2760,19 +3181,20 @@ def main():
                                         runs_time_number,
                                     )
                         case pygame.K_RIGHT | pygame.K_d:
-                            if current_run < len(previous_runs) - 1:
-                                current_run += 1
-                                update_previous_runs_text(
-                                    previous_runs,
-                                    current_run,
-                                    runs_number,
-                                    runs_date_text,
-                                    runs_date_text_effect,
-                                    runs_score_number,
-                                    runs_wave_number,
-                                    runs_level_number,
-                                    runs_time_number,
-                                )
+                            if game_state == "previous_runs":
+                                if current_run < len(previous_runs) - 1:
+                                    current_run += 1
+                                    update_previous_runs_text(
+                                        previous_runs,
+                                        current_run,
+                                        runs_number,
+                                        runs_date_text,
+                                        runs_date_text_effect,
+                                        runs_score_number,
+                                        runs_wave_number,
+                                        runs_level_number,
+                                        runs_time_number,
+                                    )
                         # test keybinds
                         case pygame.K_4:
                             player.lives = 0
@@ -2782,7 +3204,9 @@ def main():
                             print("game_state:", game_state)
                             print("previous game state:", previous_game_state)
                         case pygame.K_7:
-                            pygame.event.post(pygame.event.Event(CustomEvent.PLAYER_HIT))
+                            pygame.event.post(
+                                pygame.event.Event(CustomEvent.PLAYER_HIT)
+                            )
                         case pygame.K_8:
                             reset_game_results()
                         case pygame.K_9:
@@ -2804,7 +3228,7 @@ def main():
                                 all_sprites,
                             )
                         case pygame.K_u:
-                            kill_sprite_group(power_sprites, power_up_text_sprites)
+                            reset_controls_file()
 
         ## Main game functions
 
@@ -2825,6 +3249,10 @@ def main():
                         runs_text,
                         runs_text_effect_2,
                         runs_button,
+                        controls_text_effect_1,
+                        controls_text,
+                        controls_text_effect_2,
+                        controls_button,
                         all_sprites,
                         text_sprites,
                         user_interface_sprites,
@@ -2856,6 +3284,29 @@ def main():
                         user_interface_sprites,
                         runs_screen_sprites,
                     )
+            case "controls_screen":
+                if not controls_screen_sprites:
+                    display_controls_screen(
+                        back_text_effect_1,
+                        back_text,
+                        back_text_effect_2,
+                        back_button,
+                        controls_title_text,
+                        up_control_button,
+                        down_control_button,
+                        left_control_button,
+                        right_control_button,
+                        shoot_control_button,
+                        up_control_word,
+                        down_control_word,
+                        left_control_word,
+                        right_control_word,
+                        shoot_control_word,
+                        all_sprites,
+                        text_sprites,
+                        user_interface_sprites,
+                        controls_screen_sprites,
+                    )
             case "paused":
                 if not pause_screen_sprites:
                     display_pause_screen(
@@ -2874,7 +3325,7 @@ def main():
             case "in_game":
                 point_object_to_object(player, mouse)
 
-                fire_bullet(player, all_sprites, player_bullet_sprites)
+                fire_bullet(player, controls, all_sprites, player_bullet_sprites)
 
                 wave_value, wave, wave_delay = spawn_waves(
                     all_sprites,
@@ -2900,7 +3351,7 @@ def main():
                 ):
                     pygame.event.post(pygame.event.Event(CustomEvent.PLAYER_HIT))
 
-                player.move()
+                player.move(controls)
                 player.calc_movement()
 
                 if player.immune:
