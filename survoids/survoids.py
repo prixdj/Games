@@ -112,7 +112,7 @@ class Background(pygame.sprite.Sprite):
         self._layer = 0
         self.image = pygame.image.load(get_path("images/blue.png"))
         self.image = pygame.transform.scale(self.image, (WIDTH, HEIGHT))
-        self.rect = self.image.get_rect(center=(WIDTH / 2, HEIGHT / 2))
+        self.rect: pygame.Rect = self.image.get_rect(center=(WIDTH / 2, HEIGHT / 2))
 
 
 class Mouse(pygame.sprite.Sprite):
@@ -129,8 +129,8 @@ class Mouse(pygame.sprite.Sprite):
         super().__init__(*groups)
         self._layer = 10
         self.image = pygame.image.load(get_path("images/crosshair.png")).convert_alpha()
-        self.surf = pygame.Surface((30, 33))
-        self.rect = self.surf.get_rect()
+        self.surf: pygame.Surface = pygame.Surface((30, 33))
+        self.rect: pygame.Rect = self.surf.get_rect()
 
     def update(self):
         """Updates the mouse object to the position of the actual mouse."""
@@ -204,8 +204,8 @@ class Player(pygame.sprite.Sprite):
         )
         self.original_image = self.NORMAL_IMAGE
 
-        self.surf = pygame.Surface(self.scaled_size)
-        self.rect = self.surf.get_rect(center=(WIDTH / 2, HEIGHT / 2))
+        self.surf: pygame.Surface = pygame.Surface(self.scaled_size)
+        self.rect: pygame.Rect = self.surf.get_rect(center=(WIDTH / 2, HEIGHT / 2))
         self.x = WIDTH / 2
         self.y = HEIGHT / 2
         self.angle = 90.0
@@ -549,8 +549,8 @@ class Thruster(pygame.sprite.Sprite):
         self._layer = 5
         self.image = pygame.image.load(get_path("images/thruster.png")).convert_alpha()
         self.original_image = pygame.image.load(get_path("images/thruster.png"))
-        self.surf = pygame.Surface((14, 31))
-        self.rect = self.surf.get_rect()
+        self.surf: pygame.Surface = pygame.Surface((14, 31))
+        self.rect: pygame.Rect = self.surf.get_rect()
         self.OFFSET = 30
         self.angle = 90.0
         self.visibility = False
@@ -609,8 +609,8 @@ class Bullet(pygame.sprite.Sprite):
         unscaled_image = pygame.image.load(get_path(f"images/{img}")).convert_alpha()
         self.image = pygame.transform.scale(unscaled_image, size)
         self.original_image = pygame.transform.scale(unscaled_image, size)
-        self.surf = pygame.Surface(size)
-        self.rect = self.surf.get_rect(center=tuple(map(lambda x: round(x), pos)))
+        self.surf: pygame.Surface = pygame.Surface(size)
+        self.rect: pygame.Rect = self.surf.get_rect(center=tuple(map(lambda x: round(x), pos)))
         self.x = pos[0]
         self.y = pos[1]
 
@@ -785,8 +785,8 @@ class Enemy(pygame.sprite.Sprite):
         unscaled_image = pygame.image.load(get_path(f"images/{img}")).convert_alpha()
         self.image = pygame.transform.scale(unscaled_image, size)
         self.original_image = pygame.transform.scale(unscaled_image, size)
-        self.surf = pygame.Surface(size)
-        self.rect = self.surf.get_rect()
+        self.surf: pygame.Surface = pygame.Surface(size)
+        self.rect: pygame.Rect = self.surf.get_rect()
 
         self.width = size[0]
         self.height = size[1]
@@ -962,8 +962,8 @@ class Hitmarker(pygame.sprite.Sprite):
         self._layer = 4
 
         self.image = pygame.image.load(get_path("images/hit_marker.png")).convert_alpha()
-        self.surf = pygame.Surface((37, 37))
-        self.rect = self.surf.get_rect(center=tuple(map(lambda x: round(x), pos)))
+        self.surf: pygame.Surface = pygame.Surface((37, 37))
+        self.rect: pygame.Rect = self.surf.get_rect(center=tuple(map(lambda x: round(x), pos)))
 
         self.time = 0
         self.TIMEOUT = 31  # 31 instead of 30 as update_time() is called immediately after initialisation of an object and before checking timeout
@@ -1003,8 +1003,8 @@ class Power(pygame.sprite.Sprite):
         self._layer = 7
 
         self.image = pygame.image.load(get_path(f"images/{image}")).convert_alpha()
-        self.surf = pygame.Surface((37, 37))
-        self.rect = self.surf.get_rect(center=pos)
+        self.surf: pygame.Surface = pygame.Surface((37, 37))
+        self.rect: pygame.Rect = self.surf.get_rect(center=pos)
 
 
 class Buff(pygame.sprite.Sprite):
@@ -1036,8 +1036,8 @@ class Buff(pygame.sprite.Sprite):
         self._layer = 3
 
         self.image = pygame.image.load(get_path(f"images/{image}")).convert_alpha()
-        self.surf = pygame.Surface(img_size)
-        self.rect = self.surf.get_rect(center=pos)
+        self.surf: pygame.Surface = pygame.Surface(img_size)
+        self.rect: pygame.Rect = self.surf.get_rect(center=pos)
 
 
 # lightning -> temp fire rate, star -> temp invuln, bpill -> temp double shot, rpill -> temp 3x damage
@@ -1151,8 +1151,8 @@ class Text(pygame.sprite.Sprite):
         self.colour = colour
 
         self.font = pygame.font.Font(get_path(f"fonts/{font_name}.ttf"), font_size)
-        self.surf = self.font.render(self.words, True, self.colour)
-        self.rect = self.surf.get_rect()
+        self.surf: pygame.Surface = self.font.render(self.words, True, self.colour)
+        self.rect: pygame.Rect = self.surf.get_rect()
 
         self.associated_word = associated_word
 
@@ -1177,7 +1177,7 @@ class Text(pygame.sprite.Sprite):
             new_words (str): The new words for the text object.
         """
         self.words = new_words
-        self.surf = self.font.render(self.words, True, self.colour)
+        self.surf: pygame.Surface = self.font.render(self.words, True, self.colour)
         self.rect = self.surf.get_rect()
         self.set_position()
 
@@ -1219,8 +1219,8 @@ class UserInterface(pygame.sprite.Sprite):
         if scale:
             self.image = pygame.transform.scale(self.image, (width, height))
 
-        self.surf = pygame.Surface((width, height))
-        self.rect = self.surf.get_rect(center=pos)
+        self.surf: pygame.Surface = pygame.Surface((width, height))
+        self.rect: pygame.Rect = self.surf.get_rect(center=pos)
 
         self.associated_text = associated_text
 
@@ -1254,10 +1254,10 @@ class ScreenEffect(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 9
 
-        self.surf = pygame.Surface((WIDTH, HEIGHT))
+        self.surf: pygame.Surface = pygame.Surface((WIDTH, HEIGHT))
         self.surf.set_alpha(alpha)
         self.surf.fill(colour)
-        self.rect = self.surf.get_rect(center=(WIDTH / 2, HEIGHT / 2))
+        self.rect: pygame.Rect = self.surf.get_rect(center=(WIDTH / 2, HEIGHT / 2))
 
 
 ## Functions
@@ -3557,7 +3557,8 @@ def main():
                 entity.draw(screen)
             else:
                 if not (isinstance(entity, Thruster) and not entity.visibility):
-                    screen.blit(entity.image, entity.rect)
+                    if entity.image:
+                        screen.blit(entity.image, entity.rect)
 
         pygame.display.flip()
 
