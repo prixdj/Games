@@ -21,8 +21,8 @@
 
 ## Potential Improvements
 
-# Boss enemy
 # Allow more controls
+# Add reset button for controls and previous runs files as the current method it to delete them
 # Make text more unique
 # Make exp drop and be collected / move towards the player
 # Use more @'s and _'s for functions to properly define them
@@ -1276,6 +1276,20 @@ def get_path(relative_path: str) -> str:
     return os.path.join(os.path.abspath("."), relative_path)
 
 
+def get_permanent_path(relative_path: str) -> str:
+    """Returns the permanent path of the file.
+
+    Args:
+        relative_path (str): The relative file path.
+
+    Returns:
+        str: The permanent path of the file.
+    """
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(os.path.dirname(sys.executable), relative_path)
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path)
+
+
 def calculate_angle_between_points(p1, p2) -> float:
     """Calculates the angle between two points.
 
@@ -1877,7 +1891,15 @@ def parse_previous_runs() -> list[dict[str, str]]:
     results = []
     current_run = {}
 
-    with open(get_path("game_results.txt"), "r") as file:
+    # create the permanent game_results.txt file if it doesn't exist as this is the first time it is accessed
+    if not os.path.exists(get_permanent_path("game_results.txt")):
+        with open(get_path("game_results.txt"), "r") as default_file:
+            default_data = default_file.read()
+
+        with open(get_permanent_path("game_results.txt"), "w") as permanent_file:
+            permanent_file.write(default_data)
+
+    with open(get_permanent_path("game_results.txt"), "r") as file:
         # skip first two lines
         next(file)
         next(file)
@@ -2090,7 +2112,16 @@ def parse_controls() -> dict[str, str]:
     """Parse the controls from controls.txt."""
     controls = {}
 
-    with open(get_path("controls.txt"), "r") as file:
+    # create the permanent controls.txt file if it doesn't exist as this is the first time it is accessed
+    if not os.path.exists(get_permanent_path("controls.txt")):
+        with open(get_path("controls.txt"), "r") as default_file:
+            default_data = default_file.read()
+
+        with open(get_permanent_path("controls.txt"), "w") as permanent_file:
+            permanent_file.write(default_data)
+
+
+    with open(get_permanent_path("controls.txt"), "r") as file:
         # skip first two lines
         next(file)
         next(file)
@@ -2115,7 +2146,7 @@ def write_new_control(control_name: str, new_control_word: str) -> None:
     """
     file_lines = ""
 
-    with open(get_path("controls.txt"), "r") as file:
+    with open(get_permanent_path("controls.txt"), "r") as file:
         file_lines = file.readlines()
 
     for line_num in range(len(file_lines)):
@@ -2123,13 +2154,13 @@ def write_new_control(control_name: str, new_control_word: str) -> None:
             file_lines[line_num] = f"{control_name}: {new_control_word}\n"
             break
 
-    with open(get_path("controls.txt"), "w") as file:
+    with open(get_permanent_path("controls.txt"), "w") as file:
         file.writelines(file_lines)
 
 
 def reset_controls_file() -> None:
     """Resets the controls.txt file."""
-    with open(get_path("controls.txt"), "w") as file:
+    with open(get_permanent_path("controls.txt"), "w") as file:
         file.write("This is the text file where the controls are saved.\n\n")
         file.write("Up: w")
         file.write("Down: w")
@@ -2500,7 +2531,7 @@ def remove_end_screen(
 
 def reset_game_results() -> None:
     """Resets the game_results.txt file."""
-    with open(get_path("game_results.txt"), "w") as game_results:
+    with open(get_permanent_path("game_results.txt"), "w") as game_results:
         game_results.write("This is the text file where game data is saved.\n\n")
 
 
@@ -2514,7 +2545,7 @@ def store_game_info(score: int, level: int, wave: int, time_elapsed: float) -> N
         time_elapsed (float): The number of ticks elapsed in game.
     """
 
-    with open(get_path("game_results.txt"), "a") as game_results:
+    with open(get_permanent_path("game_results.txt"), "a") as game_results:
         game_results.write(f"Date: {datetime.date.today()}\n")
         game_results.write(f"Score: {score}\n")
         game_results.write(f"Wave: {wave}\n")
