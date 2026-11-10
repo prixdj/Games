@@ -419,3 +419,6 @@ FodyWeavers.xsd
 
 # MacOS system file
 .DS_Store
+
+# Krita
+*.~*
