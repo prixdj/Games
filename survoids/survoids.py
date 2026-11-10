@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Author: prixdj
 # Date created: 15/02/2026
 # Date updated: 07/11/2026
@@ -10,7 +12,7 @@
 # Have a class for the game, storing score and other stuff
 # Use math.isclose for better float comparison
 # Use more general classes to avoid repetition in docstrings
-# Define an OS path
+# Define actual path and relative path functions
 # Start with correct file layout and function passing instead of global variables
 # Add sprites to groups as they are created (usually)
 # Always write something small to do next time
@@ -21,6 +23,10 @@
 
 ## Potential Improvements
 
+# Add sound
+# Base sprite class
+# Game class
+# Docstring reduction
 # Allow more controls
 # Add reset button for controls and previous runs files as the current method it to delete them
 # Make text more unique
@@ -183,13 +189,17 @@ class Player(pygame.sprite.Sprite):
         self._layer = 6
 
         self.scaled_size = (45, 37)
-        unscaled_image = pygame.image.load(get_path("images/player.png")).convert_alpha()
-        unscaled_IMMUNE_IMAGE = pygame.image.load(get_path("images/player_immune.png")).convert_alpha()
-        unscaled_INVULN_IMAGE_1 = pygame.image.load(get_path(
-            "images/player_star_invuln_1.png")
+        unscaled_image = pygame.image.load(
+            get_path("images/player.png")
         ).convert_alpha()
-        unscaled_INVULN_IMAGE_2 = pygame.image.load(get_path(
-            "images/player_star_invuln_2.png")
+        unscaled_IMMUNE_IMAGE = pygame.image.load(
+            get_path("images/player_immune.png")
+        ).convert_alpha()
+        unscaled_INVULN_IMAGE_1 = pygame.image.load(
+            get_path("images/player_star_invuln_1.png")
+        ).convert_alpha()
+        unscaled_INVULN_IMAGE_2 = pygame.image.load(
+            get_path("images/player_star_invuln_2.png")
         ).convert_alpha()
         self.image = pygame.transform.scale(unscaled_image, self.scaled_size)
         self.NORMAL_IMAGE = pygame.transform.scale(unscaled_image, self.scaled_size)
@@ -418,18 +428,26 @@ class Player(pygame.sprite.Sprite):
         keyboard = pygame.key.get_pressed()
 
         # Accelerate
-        if keyboard[pygame.key.key_code(controls["Up"])]:
-            if self.acceleration_up < self.MAX_ACCELERATION_UP:
-                self.acceleration_up += self.acceleration_speed * self.accel_rate
-        if keyboard[pygame.key.key_code(controls["Down"])]:
-            if self.acceleration_down < self.MAX_ACCELERATION_DOWN:
-                self.acceleration_down += self.acceleration_speed * self.accel_rate
-        if keyboard[pygame.key.key_code(controls["Left"])]:
-            if self.acceleration_left < self.MAX_ACCELERATION_LEFT:
-                self.acceleration_left += self.acceleration_speed * self.accel_rate
-        if keyboard[pygame.key.key_code(controls["Right"])]:
-            if self.acceleration_right < self.MAX_ACCELERATION_RIGHT:
-                self.acceleration_right += self.acceleration_speed * self.accel_rate
+        if (
+            keyboard[pygame.key.key_code(controls["Up"])]
+            and self.acceleration_up < self.MAX_ACCELERATION_UP
+        ):
+            self.acceleration_up += self.acceleration_speed * self.accel_rate
+        if (
+            keyboard[pygame.key.key_code(controls["Down"])]
+            and self.acceleration_down < self.MAX_ACCELERATION_DOWN
+        ):
+            self.acceleration_down += self.acceleration_speed * self.accel_rate
+        if (
+            keyboard[pygame.key.key_code(controls["Left"])]
+            and self.acceleration_left < self.MAX_ACCELERATION_LEFT
+        ):
+            self.acceleration_left += self.acceleration_speed * self.accel_rate
+        if (
+            keyboard[pygame.key.key_code(controls["Right"])]
+            and self.acceleration_right < self.MAX_ACCELERATION_RIGHT
+        ):
+            self.acceleration_right += self.acceleration_speed * self.accel_rate
 
     def calc_movement(self) -> None:  # Should not trigger if the game state is paused
         """Calculates the movement of the player and updates the player's coordinates."""
@@ -495,17 +513,18 @@ class Player(pygame.sprite.Sprite):
                     self, buff_name + "timer", getattr(self, buff_name + "timer") - 1
                 )
 
-                if buff_name == "star_buff_":  # updating invulnerability image
-                    if (
-                        getattr(self, buff_name + "timer") <= FPS * 2
-                        and getattr(self, buff_name + "timer") % 10 == 0
-                    ):
-                        if self.original_image == self.INVULN_IMAGE_1:
-                            self.image = self.INVULN_IMAGE_2
-                            self.original_image = self.INVULN_IMAGE_2
-                        elif self.original_image == self.INVULN_IMAGE_2:
-                            self.image = self.INVULN_IMAGE_1
-                            self.original_image = self.INVULN_IMAGE_1
+                # updating invulnerability image
+                if (
+                    buff_name == "star_buff_"
+                    and getattr(self, buff_name + "timer") <= FPS * 2
+                    and getattr(self, buff_name + "timer") % 10 == 0
+                ):
+                    if self.original_image == self.INVULN_IMAGE_1:
+                        self.image = self.INVULN_IMAGE_2
+                        self.original_image = self.INVULN_IMAGE_2
+                    elif self.original_image == self.INVULN_IMAGE_2:
+                        self.image = self.INVULN_IMAGE_1
+                        self.original_image = self.INVULN_IMAGE_1
 
                 if getattr(self, buff_name + "timer") <= 0:
                     setattr(self, buff_name + "act", False)
@@ -610,7 +629,7 @@ class Bullet(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(unscaled_image, size)
         self.original_image = pygame.transform.scale(unscaled_image, size)
         self.surf: pygame.Surface = pygame.Surface(size)
-        self.rect: pygame.Rect = self.surf.get_rect(center=tuple(map(lambda x: round(x), pos)))
+        self.rect: pygame.Rect = self.surf.get_rect(center=tuple(map(round, pos)))
         self.x = pos[0]
         self.y = pos[1]
 
@@ -652,7 +671,7 @@ class VolumeMeter(pygame.sprite.Sprite):
     def __init__(
         self,
         pos: tuple[int | float, int | float],
-        initial_val: int | float,
+        initial_val: float,
         width: int,
         height: int,
         front_colour: tuple[int, int, int],
@@ -730,9 +749,9 @@ class VolumeMeter(pygame.sprite.Sprite):
 
     def update(self):
         """Updates the volume meter's position if necessary."""
-        if self.obj:
-            self.x = getattr(self.obj, "x") - getattr(self.obj, "width")/2
-            self.y = getattr(self.obj, "y") + getattr(self.obj, "height")/2 + getattr(self.obj, "health_bar_offset")
+        if isinstance(self.obj, Enemy):
+            self.x = self.obj.x - self.obj.width / 2 + self.obj.health_bar_offset_x
+            self.y = self.obj.y + self.obj.height / 2 + self.obj.health_bar_offset_y
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -766,7 +785,7 @@ class Enemy(pygame.sprite.Sprite):
         self,
         img: str = "enemy_a.png",
         size: tuple = (26, 21),
-        speed: int | float = 2,
+        speed: float = 2,
         hp: int = 1,
         health_bar: VolumeMeter | None = None,
     ):
@@ -795,7 +814,8 @@ class Enemy(pygame.sprite.Sprite):
         self.hp = hp
 
         self.health_bar = health_bar
-        self.health_bar_offset = 0
+        self.health_bar_offset_x = 0
+        self.health_bar_offset_y = 0
 
         self.angle = rand.randint(0, 360)
         self.radians = -math.radians(self.angle)
@@ -831,7 +851,6 @@ class Enemy(pygame.sprite.Sprite):
 
     def fire(self, *sprite_groups) -> None:
         """Placeholder for enemy types to fire bullets that should be overridden."""
-        pass
 
     def move(self) -> None:
         """Moves the enemy towards the player."""
@@ -938,7 +957,8 @@ class EnemyBoss(Enemy):
         """Initialises the Boss type enemy with the enemy_boss.png, full size and a speed of 0.5."""
         super().__init__(img="enemy_boss.png", size=(194, 168), speed=0.8, hp=30)
 
-        self.health_bar_offset = self.height/4
+        self.health_bar_offset_x = 12
+        self.health_bar_offset_y = self.height / 4
 
 
 class Hitmarker(pygame.sprite.Sprite):
@@ -961,9 +981,11 @@ class Hitmarker(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 4
 
-        self.image = pygame.image.load(get_path("images/hit_marker.png")).convert_alpha()
+        self.image = pygame.image.load(
+            get_path("images/hit_marker.png")
+        ).convert_alpha()
         self.surf: pygame.Surface = pygame.Surface((37, 37))
-        self.rect: pygame.Rect = self.surf.get_rect(center=tuple(map(lambda x: round(x), pos)))
+        self.rect: pygame.Rect = self.surf.get_rect(center=tuple(map(round, pos)))
 
         self.time = 0
         self.TIMEOUT = 31  # 31 instead of 30 as update_time() is called immediately after initialisation of an object and before checking timeout
@@ -974,9 +996,7 @@ class Hitmarker(pygame.sprite.Sprite):
         Returns:
             bool: True if the hitmarker has timed out, False if not.
         """
-        if self.time >= self.TIMEOUT:
-            return True
-        return False
+        return self.time >= self.TIMEOUT
 
     def update_time(self):
         """Updates the hitmarker object's time variable."""
@@ -1262,6 +1282,7 @@ class ScreenEffect(pygame.sprite.Sprite):
 
 ## Functions
 
+
 def get_path(relative_path: str) -> str:
     """Returns the actual path of the file.
 
@@ -1272,7 +1293,7 @@ def get_path(relative_path: str) -> str:
         str: The actual path of the file.
     """
     if hasattr(sys, "_MEIPASS"):
-        return os.path.join(sys._MEIPASS, relative_path) # type: ignore
+        return os.path.join(sys._MEIPASS, relative_path)  # type: ignore
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path)
 
 
@@ -1441,9 +1462,7 @@ def end_wave(enemy_sprites: pygame.sprite.Group) -> bool:
     Returns:
         bool: True if there are no enemies in the sprite group, False if not
     """
-    if len(enemy_sprites) == 0:
-        return True
-    return False
+    return len(enemy_sprites) == 0
 
 
 def display_wave_clear(
@@ -1485,8 +1504,8 @@ def spawn_enemies(
             new_enemy = enemy()
             health_bar = VolumeMeter(
                 (
-                    new_enemy.x - new_enemy.width / 2,
-                    new_enemy.y + new_enemy.height / 2 + new_enemy.health_bar_offset,
+                    new_enemy.x - new_enemy.width / 2 + new_enemy.health_bar_offset_x,
+                    new_enemy.y + new_enemy.height / 2 + new_enemy.health_bar_offset_y,
                 ),
                 new_enemy.hp,
                 174,
@@ -1935,9 +1954,7 @@ def update_previous_runs_text(
     runs_time_number: Text,
 ) -> None:
     if previous_runs:
-        runs_number.update_words(
-            f"({str(current_run + 1)} / {str(len(previous_runs))})"
-        )
+        runs_number.update_words(f"({current_run + 1!s} / {len(previous_runs)!s})")
         runs_date_text.update_words(previous_runs[current_run]["Date"])
         runs_date_text_effect.update_words(previous_runs[current_run]["Date"])
         runs_score_number.update_words(previous_runs[current_run]["Score"])
@@ -2119,7 +2136,6 @@ def parse_controls() -> dict[str, str]:
 
         with open(get_permanent_path("controls.txt"), "w") as permanent_file:
             permanent_file.write(default_data)
-
 
     with open(get_permanent_path("controls.txt"), "r") as file:
         # skip first two lines
@@ -2383,9 +2399,7 @@ def check_mouse_click(obj) -> bool:
     Returns:
         bool: True if the mouse is clicking on the object, False if not
     """
-    if obj.rect.collidepoint(pygame.mouse.get_pos()):
-        return True
-    return False
+    return obj.rect.collidepoint(pygame.mouse.get_pos())
 
 
 def check_game_over(lives: int) -> bool:
@@ -2397,10 +2411,7 @@ def check_game_over(lives: int) -> bool:
     Returns:
         bool: True if the player has died, False if they are alive.
     """
-    if lives <= 0:
-        return True
-    else:
-        return False
+    return lives <= 0
 
 
 def display_powers(
@@ -3194,37 +3205,38 @@ def main():
                                 else:
                                     back_button.change_clicked(False)
                                 if check_mouse_click(left_arrow_button):
-                                    if left_arrow_button.clicked:
-                                        if current_run > 0:
-                                            current_run -= 1
-                                            update_previous_runs_text(
-                                                previous_runs,
-                                                current_run,
-                                                runs_number,
-                                                runs_date_text,
-                                                runs_date_text_effect,
-                                                runs_score_number,
-                                                runs_wave_number,
-                                                runs_level_number,
-                                                runs_time_number,
-                                            )
+                                    if left_arrow_button.clicked and current_run > 0:
+                                        current_run -= 1
+                                        update_previous_runs_text(
+                                            previous_runs,
+                                            current_run,
+                                            runs_number,
+                                            runs_date_text,
+                                            runs_date_text_effect,
+                                            runs_score_number,
+                                            runs_wave_number,
+                                            runs_level_number,
+                                            runs_time_number,
+                                        )
                                 else:
                                     left_arrow_button.change_clicked(False)
                                 if check_mouse_click(right_arrow_button):
-                                    if right_arrow_button.clicked:
-                                        if current_run < len(previous_runs) - 1:
-                                            current_run += 1
-                                            update_previous_runs_text(
-                                                previous_runs,
-                                                current_run,
-                                                runs_number,
-                                                runs_date_text,
-                                                runs_date_text_effect,
-                                                runs_score_number,
-                                                runs_wave_number,
-                                                runs_level_number,
-                                                runs_time_number,
-                                            )
+                                    if (
+                                        right_arrow_button.clicked
+                                        and current_run < len(previous_runs) - 1
+                                    ):
+                                        current_run += 1
+                                        update_previous_runs_text(
+                                            previous_runs,
+                                            current_run,
+                                            runs_number,
+                                            runs_date_text,
+                                            runs_date_text_effect,
+                                            runs_score_number,
+                                            runs_wave_number,
+                                            runs_level_number,
+                                            runs_time_number,
+                                        )
                                 else:
                                     right_arrow_button.change_clicked(False)
                             case "controls_screen":
@@ -3305,35 +3317,36 @@ def main():
                                     pygame.event.Event(CustomEvent.BACK_TO_MAIN)
                                 )
                         case pygame.K_LEFT | pygame.K_a:
-                            if game_state == "previous_runs":
-                                if current_run > 0:
-                                    current_run -= 1
-                                    update_previous_runs_text(
-                                        previous_runs,
-                                        current_run,
-                                        runs_number,
-                                        runs_date_text,
-                                        runs_date_text_effect,
-                                        runs_score_number,
-                                        runs_wave_number,
-                                        runs_level_number,
-                                        runs_time_number,
-                                    )
+                            if game_state == "previous_runs" and current_run > 0:
+                                current_run -= 1
+                                update_previous_runs_text(
+                                    previous_runs,
+                                    current_run,
+                                    runs_number,
+                                    runs_date_text,
+                                    runs_date_text_effect,
+                                    runs_score_number,
+                                    runs_wave_number,
+                                    runs_level_number,
+                                    runs_time_number,
+                                )
                         case pygame.K_RIGHT | pygame.K_d:
-                            if game_state == "previous_runs":
-                                if current_run < len(previous_runs) - 1:
-                                    current_run += 1
-                                    update_previous_runs_text(
-                                        previous_runs,
-                                        current_run,
-                                        runs_number,
-                                        runs_date_text,
-                                        runs_date_text_effect,
-                                        runs_score_number,
-                                        runs_wave_number,
-                                        runs_level_number,
-                                        runs_time_number,
-                                    )
+                            if (
+                                game_state == "previous_runs"
+                                and current_run < len(previous_runs) - 1
+                            ):
+                                current_run += 1
+                                update_previous_runs_text(
+                                    previous_runs,
+                                    current_run,
+                                    runs_number,
+                                    runs_date_text,
+                                    runs_date_text_effect,
+                                    runs_score_number,
+                                    runs_wave_number,
+                                    runs_level_number,
+                                    runs_time_number,
+                                )
                         # test keybinds
                         # case pygame.K_4:
                         #     player.lives = 0
@@ -3366,13 +3379,13 @@ def main():
                         #         buff_sprites,
                         #         all_sprites,
                         #     )
-                        # case pygame.K_u:
-                        #     spawn_enemies(
-                        #         [EnemyBoss],
-                        #         all_sprites,
-                        #         enemy_sprites,
-                        #         volume_meter_sprites,
-                        #     )
+                        case pygame.K_u:
+                            spawn_enemies(
+                                [EnemyBoss],
+                                all_sprites,
+                                enemy_sprites,
+                                volume_meter_sprites,
+                            )
 
         ## Main game functions
 
@@ -3582,14 +3595,15 @@ def main():
         screen.fill((0, 0, 0))
 
         for entity in all_sprites:
-            if isinstance(entity, Text) or isinstance(entity, ScreenEffect):
+            if isinstance(entity, (Text, ScreenEffect)):
                 screen.blit(entity.surf, entity.rect)
             elif isinstance(entity, VolumeMeter):
                 entity.draw(screen)
-            else:
-                if not (isinstance(entity, Thruster) and not entity.visibility):
-                    if entity.image:
-                        screen.blit(entity.image, entity.rect)
+            elif (
+                not (isinstance(entity, Thruster) and not entity.visibility)
+                and entity.image
+            ):
+                screen.blit(entity.image, entity.rect)
 
         pygame.display.flip()
 
