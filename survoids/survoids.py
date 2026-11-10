@@ -405,12 +405,13 @@ class Enemy(pygame.sprite.Sprite):
         value (int): The value of the Enemy class.
         likelihood (int): The likelihood that the Enemy class appears.
         SPAWN_RADIUS (int): The minimum distance from the centre of the screen that the enemy should spawn from.
-        RAND_RANGE (int): The maximum range from the centre of the screen that the enemy should spawn from.
+        MAX_INCREASE_RADIUS (int): The maximum range from the centre of the screen that the enemy should spawn from.
         image (surf): The image of the enemy scaled and rotated correctly.
         original_image (surf): Used as a placeholder for scaling and rotating the enemy image.
         surf (surf): The surface for the enemy.
         rect (rect): The rect of the enemy.
         SPEED (int): The speed of the enemy.
+        hp (int): The health points of the enemy.
         angle (float): The angle of the enemy, first used to calculate its spawn location.
         radians (float): The angle of the enemy in degrees and flipped.
         x (float): The unrounded x coordinate of the enemy.
@@ -419,9 +420,9 @@ class Enemy(pygame.sprite.Sprite):
     value: int = 0
     likelihood: int = 0
     SPAWN_RADIUS: int = 450
-    RAND_RANGE: int = 600
+    MAX_INCREASE_RADIUS: int = 50
 
-    def __init__(self, img: str = "enemy_a.png", size: tuple = (26, 21), speed: int | float = 2):
+    def __init__(self, img: str = "enemy_a.png", size: tuple = (26, 21), speed: int | float = 2, hp: int = 1):
         """Initialises the enemy object.
 
         Args:
@@ -439,12 +440,13 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect()
 
         self.SPEED = speed
+        self.hp = hp
 
         self.angle = rand.randint(0,360)
         self.radians = -math.radians(self.angle)
 
-        self.x = WIDTH / 2 + rand.randint(Enemy.SPAWN_RADIUS, Enemy.RAND_RANGE) * math.sin(self.radians)
-        self.y = HEIGHT / 2 + rand.randint(Enemy.SPAWN_RADIUS, Enemy.RAND_RANGE) * math.cos(self.radians)
+        self.x = WIDTH / 2 + rand.randint(Enemy.SPAWN_RADIUS, round(Enemy.SPAWN_RADIUS + Enemy.MAX_INCREASE_RADIUS * self.SPEED)) * math.sin(self.radians)
+        self.y = HEIGHT / 2 + rand.randint(Enemy.SPAWN_RADIUS, round(Enemy.SPAWN_RADIUS + Enemy.MAX_INCREASE_RADIUS * self.SPEED)) * math.cos(self.radians)
         self.rect.centerx = round(self.x)
         self.rect.centery = round(self.y)
 
@@ -480,7 +482,7 @@ class Enemy(pygame.sprite.Sprite):
 
 
 class EnemyA(Enemy):
-    """The A type of the enemy class.
+    """The A type of the enemy class that tries to ram the player.
 
     Attributes:
         value (int): The value of the Enemy class.
@@ -495,7 +497,7 @@ class EnemyA(Enemy):
 
 
 class EnemyB(Enemy):
-    """The B type of the enemy class.
+    """The B type of the enemy class that fires bullets while trying to ram the player.
 
     Attributes:
         value (int): The value of the Enemy class.
@@ -526,6 +528,21 @@ class EnemyB(Enemy):
             self.bullet_delay = self.BULLET_HOLDOFF
         else:
             self.bullet_delay -= 1
+
+
+class EnemyC(Enemy):
+    """The C type of the enemy class that has a higher hp value.
+
+    Attributes:
+        value (int): The value of the Enemy class.
+        likelihood (int): The likelihood that the Enemy class appears.
+    """
+    value = 10
+    likelihood = 0
+
+    def __init__(self):
+        """Initialises the C type enemy with the enemy_c.png, a quarter of the size and a speed of 1.5."""
+        super().__init__(img="enemy_c.png", size=(26, 21), speed=1.5, hp=3)
 
 
 class Hitmarker(pygame.sprite.Sprite):
@@ -990,7 +1007,7 @@ def calc_wave(wave_value: int) -> list[type[Enemy]]:
         list[type[Enemy]]: A list of enemy classes for the wave value.
     """
     enemy_wave: list[type[Enemy]] = []
-    enemy_types: list[type[Enemy]] = [EnemyA, EnemyB]
+    enemy_types: list[type[Enemy]] = Enemy.__subclasses__()
     enemy_likelihood: list[type[Enemy]] = []
     current_wave_value: int = wave_value
 
@@ -1012,9 +1029,10 @@ def calc_wave(wave_value: int) -> list[type[Enemy]]:
 
 
 def change_enemy_likelihoods() -> None:
-    """Changes the likelihood values of the enemy classes."""
+    """Temp function that changes the likelihood values of the enemy classes."""
     EnemyA.likelihood -= 1
     EnemyB.likelihood += 1
+    EnemyC.likelihood += 1
 
 
 def spawn_waves(
@@ -1577,16 +1595,19 @@ def main():
                 player.set_vulnerable()
 
             if event.type == ENEMY_HIT:
-                enemy_pos = event.enemy.get_pos()
-                hitmarker = Hitmarker(enemy_pos)
-                add_sprite_to_groups(hitmarker, all_sprites, hitmarker_sprites)
-                remove_sprite_from_groups(event.enemy, all_sprites, enemy_sprites)
                 remove_sprite_from_groups(event.bullet, all_sprites, player_bullet_sprites)
-                event.enemy.kill()
                 event.bullet.kill()
-                score = update_stats(player, score)
-                score_text.update_words(str(score))
-                enemy_num_text.update_words(str(len(enemy_sprites)))
+                if event.enemy.hp > 1:
+                    event.enemy.hp -= 1
+                else:
+                    enemy_pos = event.enemy.get_pos()
+                    hitmarker = Hitmarker(enemy_pos)
+                    add_sprite_to_groups(hitmarker, all_sprites, hitmarker_sprites)
+                    remove_sprite_from_groups(event.enemy, all_sprites, enemy_sprites)
+                    event.enemy.kill()
+                    score = update_stats(player, score)
+                    score_text.update_words(str(score))
+                    enemy_num_text.update_words(str(len(enemy_sprites)))
 
             if event.type == PLAYER_HIT:
                 if not player.immune:
@@ -1696,12 +1717,6 @@ def main():
 
                 thruster.update_visibility()
 
-                for meter in volume_meter_sprites:
-                    if meter.attr == "len(enemy_sprites)":
-                        meter.update_current_vol(len(enemy_sprites))
-                    else:
-                        meter.update_current_vol()
-
                 for enemy in enemy_sprites:
                     enemy.move()
                     enemy.fire(all_sprites, enemy_bullet_sprites)
@@ -1720,6 +1735,12 @@ def main():
 
                 for bullet in enemy_bullet_sprites.sprites() + player_bullet_sprites.sprites():
                     bullet.move()
+
+        for meter in volume_meter_sprites:
+                    if meter.attr == "len(enemy_sprites)":
+                        meter.update_current_vol(len(enemy_sprites))
+                    else:
+                        meter.update_current_vol()
 
         for enemy in enemy_sprites:
             point_object_to_object(enemy, player)
