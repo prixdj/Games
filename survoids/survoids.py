@@ -13,12 +13,17 @@
 # Define an OS path
 # Start with correct file layout and function passing instead of global variables
 # Add sprites to groups as they are created (usually)
+# Always write something small to do next time
+# Have a .draw method in the base class
+# Type declare sprite groups
+# Private any methods only used by the class
 
 
 ## Improvements
 
-# Controls screen
 # Previous runs thing
+# Controls screen
+# Boss enemy
 
 
 ## Imports
@@ -62,13 +67,14 @@ LEVEL_UP_COMPLETE = pygame.event.custom_type()
 # 0 - Background
 # 1 - Bullet
 # 2 - Enemy
-# 3 - Hitmarker
-# 4 - Thruster
-# 5 - Player
-# 6 - UserInterface
-# 7 - Text
-# 8 - ScreenEffect
-# 9 - Mouse
+# 3 - Buffs
+# 4 - Hitmarker
+# 5 - Thruster
+# 6 - Player
+# 7 - UserInterface
+# 8 - Text
+# 9 - ScreenEffect
+# 10 - Mouse
 
 
 ## Classes
@@ -103,7 +109,7 @@ class Mouse(pygame.sprite.Sprite):
     def __init__(self, *groups):
         """Initialises the mouse object."""
         super().__init__(*groups)
-        self._layer = 9
+        self._layer = 10
         self.image = pygame.image.load("survoids/images/crosshair.png").convert_alpha()
         self.surf = pygame.Surface((30, 33))
         self.rect = self.surf.get_rect()
@@ -156,17 +162,29 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, *groups):
         """Initialises the player object."""
         super().__init__(*groups)
-        self._layer = 5
+        self._layer = 6
 
         self.scaled_size = (45, 37)
         unscaled_image = pygame.image.load("survoids/images/player.png").convert_alpha()
         unscaled_IMMUNE_IMAGE = pygame.image.load(
             "survoids/images/player_immune.png"
         ).convert_alpha()
+        unscaled_INVULN_IMAGE_1 = pygame.image.load(
+            "survoids/images/player_star_invuln_1.png"
+        ).convert_alpha()
+        unscaled_INVULN_IMAGE_2 = pygame.image.load(
+            "survoids/images/player_star_invuln_2.png"
+        ).convert_alpha()
         self.image = pygame.transform.scale(unscaled_image, self.scaled_size)
         self.NORMAL_IMAGE = pygame.transform.scale(unscaled_image, self.scaled_size)
         self.IMMUNE_IMAGE = pygame.transform.scale(
             unscaled_IMMUNE_IMAGE, self.scaled_size
+        )
+        self.INVULN_IMAGE_1 = pygame.transform.scale(
+            unscaled_INVULN_IMAGE_1, self.scaled_size
+        )
+        self.INVULN_IMAGE_2 = pygame.transform.scale(
+            unscaled_INVULN_IMAGE_2, self.scaled_size
         )
         self.original_image = self.NORMAL_IMAGE
 
@@ -186,6 +204,10 @@ class Player(pygame.sprite.Sprite):
         self.MAX_ACCELERATION_LEFT = 5.0
         self.MAX_ACCELERATION_RIGHT = 5.0
 
+        self.NORMAL_ACCEL_RATE = 1.0
+        self.accel_rate = self.NORMAL_ACCEL_RATE
+        self.BUFFED_ACCEL_RATE = 1.25
+
         self.acceleration_speed = 0.2
         self.deceleration_speed = 0.1
 
@@ -204,6 +226,28 @@ class Player(pygame.sprite.Sprite):
 
         self.bullet_holdoff = 50
         self.bullet_delay = 0
+
+        self.ORIG_DAMAGE = 1
+        self.damage = self.ORIG_DAMAGE
+        self.BUFFED_DAMAGE = 3
+
+        self.BUFF_TIMER_DURATION = FPS * 5
+
+        self.lightning_buff_act = False
+        self.lightning_buff_timer = 0
+        self.DEFAULT_ATK_SPEED = 1.0
+        self.atk_speed = self.DEFAULT_ATK_SPEED
+        self.BUFFED_ATK_SPEED = 0.7
+
+        self.star_buff_act = False
+        self.star_buff_timer = 0
+        self.STAR_INVULN_TIMEOUT = FPS * 4
+
+        self.bpill_buff_act = False
+        self.bpill_buff_timer = 0
+
+        self.rpill_buff_act = False
+        self.rpill_buff_timer = 0
 
     def reset(self) -> None:
         """Resets all player stats."""
@@ -217,10 +261,7 @@ class Player(pygame.sprite.Sprite):
         self.acceleration_left = 0.0
         self.acceleration_right = 0.0
 
-        self.MAX_ACCELERATION_UP = 5.0
-        self.MAX_ACCELERATION_DOWN = 5.0
-        self.MAX_ACCELERATION_LEFT = 5.0
-        self.MAX_ACCELERATION_RIGHT = 5.0
+        self.accel_rate = self.NORMAL_ACCEL_RATE
 
         self.acceleration_speed = 0.2
         self.deceleration_speed = 0.1
@@ -228,18 +269,30 @@ class Player(pygame.sprite.Sprite):
         self.lives = 3
         self.immune = False
         self.immune_timer = 0
-        self.IMMUNE_TIMEOUT = FPS * 2
 
         self.experience = 0
 
         self.level = 1
         self.levels_used = 1
-        self.LEVEL_UP_THRESHOLD = 40
-        self.LEVEL_HOLDOFF = 10
         self.level_delay = 0
 
         self.bullet_holdoff = 50
         self.bullet_delay = 0
+
+        self.damage = self.ORIG_DAMAGE
+
+        self.lightning_buff_act = False
+        self.lightning_buff_timer = 0
+        self.atk_speed = self.DEFAULT_ATK_SPEED
+
+        self.star_buff_act = False
+        self.star_buff_timer = 0
+
+        self.bpill_buff_act = False
+        self.bpill_buff_timer = 0
+
+        self.rpill_buff_act = False
+        self.rpill_buff_timer = 0
 
     def get_angle(self) -> float:
         """Returns the angle of the player.
@@ -269,8 +322,11 @@ class Player(pygame.sprite.Sprite):
         self.immune = False
 
     def update_immune_timer(self) -> None:
-        """Updates the immune timer."""
+        """Updates the immune timer and image if needed."""
         self.immune_timer += 1
+        if not self.star_buff_act and self.original_image != self.IMMUNE_IMAGE:
+            self.image = self.IMMUNE_IMAGE
+            self.original_image = self.IMMUNE_IMAGE
 
     def check_immunity(self) -> None:
         """Creates an IMMUNE_OFF event if the player's immunity has worn off."""
@@ -280,6 +336,61 @@ class Player(pygame.sprite.Sprite):
         else:
             self.update_immune_timer()
 
+    def apply_buff(self, buff_type: "type[Buff]"):
+        """Applies the buff to the player.
+
+        Args:
+            buff_type (type[Buff]): The subclass type of the buff.
+        """
+        match buff_type:
+            case BuffTypes.Lightning:  # here add the temp stuff
+                if not self.lightning_buff_act:
+                    self.atk_speed = self.BUFFED_ATK_SPEED
+                    self.lightning_buff_act = True
+                    self.lightning_buff_timer = self.BUFF_TIMER_DURATION
+                else:
+                    self.lightning_buff_timer += self.BUFF_TIMER_DURATION
+            case BuffTypes.Star:
+                if not self.star_buff_act:
+                    self.accel_rate = self.BUFFED_ACCEL_RATE
+                    self.star_buff_act = True
+                    self.star_buff_timer = self.STAR_INVULN_TIMEOUT
+                    self.image = self.INVULN_IMAGE_1
+                    self.original_image = self.INVULN_IMAGE_1
+                else:
+                    self.star_buff_timer += self.STAR_INVULN_TIMEOUT
+            case BuffTypes.BluePill:
+                if not self.bpill_buff_act:
+                    self.bpill_buff_act = True
+                    self.bpill_buff_timer = self.BUFF_TIMER_DURATION
+                else:
+                    self.bpill_buff_timer += self.BUFF_TIMER_DURATION
+            case BuffTypes.RedPill:
+                if not self.rpill_buff_act:
+                    self.damage = self.BUFFED_DAMAGE
+                    self.rpill_buff_act = True
+                    self.rpill_buff_timer = self.BUFF_TIMER_DURATION
+                else:
+                    self.rpill_buff_timer += self.BUFF_TIMER_DURATION
+
+    def __remove_buff(self, buff_type: str):
+        """Removes the buff from the player.
+
+        Args:
+            buff_type (str): The subclass type of the buff as a string in the form buffname_buff_.
+        """
+        match buff_type:
+            case "lightning_buff_":
+                self.atk_speed = self.DEFAULT_ATK_SPEED
+            case "star_buff_":
+                self.accel_rate = self.NORMAL_ACCEL_RATE
+                self.image = self.NORMAL_IMAGE
+                self.original_image = self.NORMAL_IMAGE
+            case "bpill_buff_":
+                pass
+            case "rpill_buff_":
+                self.damage = self.ORIG_DAMAGE
+
     def move(self) -> None:  # Should only trigger if the game state is in_game
         """Changes the acceleration values of the player."""
         keyboard = pygame.key.get_pressed()
@@ -287,16 +398,16 @@ class Player(pygame.sprite.Sprite):
         # Accelerate
         if keyboard[pygame.K_w]:
             if self.acceleration_up < self.MAX_ACCELERATION_UP:
-                self.acceleration_up += self.acceleration_speed
+                self.acceleration_up += self.acceleration_speed * self.accel_rate
         if keyboard[pygame.K_s]:
             if self.acceleration_down < self.MAX_ACCELERATION_DOWN:
-                self.acceleration_down += self.acceleration_speed
+                self.acceleration_down += self.acceleration_speed * self.accel_rate
         if keyboard[pygame.K_a]:
             if self.acceleration_left < self.MAX_ACCELERATION_LEFT:
-                self.acceleration_left += self.acceleration_speed
+                self.acceleration_left += self.acceleration_speed * self.accel_rate
         if keyboard[pygame.K_d]:
             if self.acceleration_right < self.MAX_ACCELERATION_RIGHT:
-                self.acceleration_right += self.acceleration_speed
+                self.acceleration_right += self.acceleration_speed * self.accel_rate
 
     def calc_movement(self) -> None:  # Should not trigger if the game state is paused
         """Calculates the movement of the player and updates the player's coordinates."""
@@ -316,7 +427,7 @@ class Player(pygame.sprite.Sprite):
         self.y += self.acceleration_down - self.acceleration_up
 
     def update(self):
-        """Updates the player's level, powers and keeps the object on screen."""
+        """Updates the player's level, powers, buffs and keeps the object on screen."""
         keyboard = pygame.key.get_pressed()
 
         # Level up
@@ -348,6 +459,35 @@ class Player(pygame.sprite.Sprite):
                     pygame.event.post(pygame.event.Event(LEVEL_UP_COMPLETE))
             else:
                 self.level_delay -= 1
+
+        # Reduce buff timer
+
+        for buff_name in [
+            "lightning_buff_",
+            "star_buff_",
+            "bpill_buff_",
+            "rpill_buff_",
+        ]:
+            if getattr(self, buff_name + "act"):
+                setattr(
+                    self, buff_name + "timer", getattr(self, buff_name + "timer") - 1
+                )
+
+                if buff_name == "star_buff_":  # updating invulnerability image
+                    if (
+                        getattr(self, buff_name + "timer") <= FPS * 2
+                        and getattr(self, buff_name + "timer") % 10 == 0
+                    ):
+                        if self.original_image == self.INVULN_IMAGE_1:
+                            self.image = self.INVULN_IMAGE_2
+                            self.original_image = self.INVULN_IMAGE_2
+                        elif self.original_image == self.INVULN_IMAGE_2:
+                            self.image = self.INVULN_IMAGE_1
+                            self.original_image = self.INVULN_IMAGE_1
+
+                if getattr(self, buff_name + "timer") <= 0:
+                    setattr(self, buff_name + "act", False)
+                    self.__remove_buff(buff_name)
 
         # Keep player on-screen
         if self.x + self.scaled_size[0] / 2 > WIDTH:
@@ -384,7 +524,7 @@ class Thruster(pygame.sprite.Sprite):
     def __init__(self):
         """Initialises the thruster object."""
         super().__init__()
-        self._layer = 4
+        self._layer = 5
         self.image = pygame.image.load("survoids/images/thruster.png").convert_alpha()
         self.original_image = pygame.image.load("survoids/images/thruster.png")
         self.surf = pygame.Surface((14, 31))
@@ -473,6 +613,7 @@ class Enemy(pygame.sprite.Sprite):
     Attributes:
         value (int): The value of the Enemy class.
         likelihood (int): The likelihood that the Enemy class appears.
+        buff_spawn_chance (int): The chance that the Enemy class spawns a buff on death out of 100.
         SPAWN_RADIUS (int): The minimum distance from the centre of the screen that the enemy should spawn from.
         MAX_INCREASE_RADIUS (int): The maximum range from the centre of the screen that the enemy should spawn from.
         image (surf): The image of the enemy scaled and rotated correctly.
@@ -489,6 +630,7 @@ class Enemy(pygame.sprite.Sprite):
 
     value: int = 0
     likelihood: int = 0
+    buff_spawn_chance: int = 0
     SPAWN_RADIUS: int = 450
     MAX_INCREASE_RADIUS: int = 50
 
@@ -505,6 +647,7 @@ class Enemy(pygame.sprite.Sprite):
             img (str, optional): The png of the enemy image. Defaults to "enemy_a.png".
             size (tuple, optional): The size the enemy should be scaled to. Defaults to (26, 21).
             speed (int | float, optional): The speed of the enemy. Defaults to 2.
+            hp (int): The health points of the enemy. Defaults to 1.
         """
         super().__init__()
         self._layer = 2
@@ -569,10 +712,12 @@ class EnemyA(Enemy):
     Attributes:
         value (int): The value of the Enemy class.
         likelihood (int): The likelihood that the Enemy class appears.
+        buff_spawn_chance (int): The chance that the Enemy class spawns a buff on death out of 100.
     """
 
     value = 5
     likelihood = 10
+    buff_spawn_chance = 5
 
     def __init__(self):
         """Initialises the A type enemy with the enemy_a.png, a quarter of the size and a speed of 2."""
@@ -585,12 +730,14 @@ class EnemyB(Enemy):
     Attributes:
         value (int): The value of the Enemy class.
         likelihood (int): The likelihood that the Enemy class appears.
+        buff_spawn_chance (int): The chance that the Enemy class spawns a buff on death out of 100.
         BULLET_HOLDOFF (int): The max number of frames before the B type enemy can fire another bullet.
         bullet_delay (int): The current number of frames before the B type enemy can fire another bullet.
     """
 
     value = 10
     likelihood = 0
+    buff_spawn_chance = 7
 
     def __init__(self):
         """Initialises the B type enemy with the enemy_b.png, a quarter of the size and a speed of 1."""
@@ -626,10 +773,12 @@ class EnemyC(Enemy):
     Attributes:
         value (int): The value of the Enemy class.
         likelihood (int): The likelihood that the Enemy class appears.
+        buff_spawn_chance (int): The chance that the Enemy class spawns a buff on death out of 100.
     """
 
     value = 10
     likelihood = 0
+    buff_spawn_chance = 10
 
     def __init__(self):
         """Initialises the C type enemy with the enemy_c.png, a quarter of the size and a speed of 1.5."""
@@ -654,7 +803,7 @@ class Hitmarker(pygame.sprite.Sprite):
             pos (tuple[float, float]): The position of the enemy the bullet struck for the hitmarker to appear at.
         """
         super().__init__()
-        self._layer = 3
+        self._layer = 4
 
         self.image = pygame.image.load("survoids/images/hit_marker.png").convert_alpha()
         self.surf = pygame.Surface((37, 37))
@@ -695,11 +844,112 @@ class Power(pygame.sprite.Sprite):
             image (str): The power up image png.
         """
         super().__init__()
-        self._layer = 6
+        self._layer = 7
 
         self.image = pygame.image.load(f"survoids/images/{image}").convert_alpha()
         self.surf = pygame.Surface((37, 37))
         self.rect = self.surf.get_rect(center=pos)
+
+
+class Buff(pygame.sprite.Sprite):
+    """The buff class.
+
+    Attributes:
+        likelihood (int): The likelihood of the buff spawning when a buff is spawned.
+        image (surf): The image of the buff.
+        surf (surf): The surface of the buff.
+        rect (rect): The rect of the buff.
+    """
+
+    likelihood: int = 0
+
+    def __init__(
+        self,
+        pos: tuple[float, float],
+        image: str = "buff_lightning.png",
+        img_size: tuple[int, int] = (22, 21),
+    ):
+        """Initialisation of the buff object.
+
+        Args:
+            pos (tuple[float, float]): The position of the buff.
+            image (str): The buff image png.
+            img_size: tuple[int, int]: The size of the image.
+        """
+        super().__init__()
+        self._layer = 3
+
+        self.image = pygame.image.load(f"survoids/images/{image}").convert_alpha()
+        self.surf = pygame.Surface(img_size)
+        self.rect = self.surf.get_rect(center=pos)
+
+
+# lightning -> temp fire rate, star -> temp invuln, bpill -> temp double shot, rpill -> temp 3x damage
+
+
+class BuffLightning(Buff):
+    """The lightning buff that gives temporary fire rate."""
+
+    likelihood: int = 10
+
+    def __init__(self, new_pos: tuple[float, float]):
+        """Initialisation of the lightning buff.
+
+        Args:
+            new_pos (tuple[float, float]): The position of the lightning buff.
+        """
+        super().__init__(pos=(new_pos), image="buff_lightning.png", img_size=(19, 30))
+
+
+class BuffStar(Buff):
+    """The star buff that gives temporary invulnerability."""
+
+    likelihood: int = 5
+
+    def __init__(self, new_pos: tuple[float, float]):
+        """Initialisation of the star buff.
+
+        Args:
+            new_pos (tuple[float, float]): The position of the star buff.
+        """
+        super().__init__(pos=(new_pos), image="buff_star.png", img_size=(31, 31))
+
+
+class BuffBluePill(Buff):
+    """The blue pill buff that gives temporary double shot."""
+
+    likelihood: int = 3
+
+    def __init__(self, new_pos: tuple[float, float]):
+        """Initialisation of the blue pill buff.
+
+        Args:
+            new_pos (tuple[float, float]): The position of the blue pill buff.
+        """
+        super().__init__(pos=(new_pos), image="buff_bpill.png", img_size=(22, 21))
+
+
+class BuffRedPill(Buff):
+    """The red pill buff that gives temporary damage."""
+
+    likelihood: int = 4
+
+    def __init__(self, new_pos: tuple[float, float]):
+        """Initialisation of the red pill buff.
+
+        Args:
+            new_pos (tuple[float, float]): The position of the red pill buff.
+        """
+        super().__init__(pos=(new_pos), image="buff_rpill.png", img_size=(22, 21))
+
+
+class BuffTypes:
+    """Defines the buff types for use in a case statement."""
+
+    Lightning = BuffLightning
+    Star = BuffStar
+    BluePill = BuffBluePill
+    RedPill = BuffRedPill
 
 
 class UserInterface(pygame.sprite.Sprite):
@@ -730,7 +980,7 @@ class UserInterface(pygame.sprite.Sprite):
             scale (bool, optional): Whether the object should be scaled to the width and height or not. Defaults to False.
         """
         super().__init__()
-        self._layer = 6
+        self._layer = 7
 
         self.image = pygame.image.load(f"survoids/images/{img}").convert_alpha()
 
@@ -785,7 +1035,7 @@ class Text(pygame.sprite.Sprite):
             colour (tuple[int, int, int], optional): The RGB value of the colour of the text object. Defaults to (255, 255, 255).
         """
         super().__init__()
-        self._layer = 7
+        self._layer = 8
 
         self.words = initial
         self.pos_type = pos_type
@@ -863,7 +1113,7 @@ class VolumeMeter(pygame.sprite.Sprite):
             attr (str | None, optional): The attribute of the object or variable that the volume meter is assigned to. Defaults to None.
         """
         super().__init__()
-        self._layer = 6
+        self._layer = 7
 
         self.x = float(pos[0])
         self.y = float(pos[1])
@@ -940,7 +1190,7 @@ class ScreenEffect(pygame.sprite.Sprite):
             alpha (int, optional): The transparency value of the screen effect object.. Defaults to 0.
         """
         super().__init__()
-        self._layer = 8
+        self._layer = 9
 
         self.surf = pygame.Surface((WIDTH, HEIGHT))
         self.surf.set_alpha(alpha)
@@ -1069,11 +1319,24 @@ def fire_bullet(
 
     if player.bullet_delay <= 0:
         if keyboard[pygame.K_SPACE]:
-            bullet = Bullet(
-                player.get_angle(), player.get_pos(), "bullet.png", (4, 24), 25
-            )
-            add_sprite_to_groups(bullet, all_sprites, bullet_sprites)
-            player.bullet_delay = player.bullet_holdoff
+            if not player.bpill_buff_act:
+                bullet = Bullet(
+                    player.get_angle(), player.get_pos(), "bullet.png", (4, 24), 25
+                )
+                add_sprite_to_groups(bullet, all_sprites, bullet_sprites)
+
+            elif player.bpill_buff_act:
+                bullet_1 = Bullet(
+                    player.get_angle() + 10, player.get_pos(), "bullet.png", (4, 24), 25
+                )
+                add_sprite_to_groups(bullet_1, all_sprites, bullet_sprites)
+
+                bullet_2 = Bullet(
+                    player.get_angle() - 10, player.get_pos(), "bullet.png", (4, 24), 25
+                )
+                add_sprite_to_groups(bullet_2, all_sprites, bullet_sprites)
+
+            player.bullet_delay = math.ceil(player.bullet_holdoff * player.atk_speed)
     else:
         player.bullet_delay -= 1
 
@@ -1223,6 +1486,34 @@ def spawn_waves(
 
             wave_delay -= 1
     return wave_value, wave, wave_delay
+
+
+def spawn_buff(
+    chance: int,
+    pos: tuple[float, float],
+    buff_sprites: pygame.sprite.Group,
+    all_sprites: pygame.sprite.LayeredUpdates,
+) -> None:
+    """Spawns a random buff based on the chance given.
+
+    Args:
+        chance (int): The dead enemy's chance to spawn a buff.
+        pos (tuple[float, float]): The position of the dead enemy.
+        buff_sprites (pygame.sprite.Group): The buff sprites group.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+    """
+    if rand.randint(0, 100) <= chance:
+        buff_types = Buff.__subclasses__()
+        buffs_chance: list[type[Buff]] = []
+
+        for buff_type in buff_types:
+            for _ in range(buff_type.likelihood):
+                buffs_chance.append(buff_type)
+
+        new_buff_type = rand.choice(buffs_chance)
+        new_buff = new_buff_type(pos)
+
+        add_sprite_to_groups(new_buff, all_sprites, buff_sprites)
 
 
 def display_main_screen(
@@ -1684,6 +1975,10 @@ def store_game_info(score: int, level: int, wave: int, time_elapsed: float) -> N
         game_results.write(f"Time elapsed: {time_elapsed:.2f}s\n\n")
 
 
+def display_previous_runs():
+    pass
+
+
 ## Main
 
 
@@ -1724,6 +2019,8 @@ def main():
     hitmarker_sprites = pygame.sprite.Group()
 
     power_sprites = pygame.sprite.Group()
+    buff_sprites = pygame.sprite.Group()
+
     user_interface_sprites = pygame.sprite.Group()
     wave_info_sprites = pygame.sprite.Group()
 
@@ -1862,25 +2159,33 @@ def main():
                 start_game_time = pygame.time.get_ticks() / 1000
 
             if event.type == IMMUNE_OFF:
-                player.image = player.IMMUNE_IMAGE
-                player.original_image = player.NORMAL_IMAGE
+                if not player.star_buff_act:
+                    player.image = player.NORMAL_IMAGE
+                    player.original_image = player.NORMAL_IMAGE
                 player.set_vulnerable()
 
             if event.type == ENEMY_HIT:
                 event.bullet.kill()
-                if event.enemy.hp > 1:
-                    event.enemy.hp -= 1
-                else:
+                event.enemy.hp -= player.damage
+                if event.enemy.hp <= 0:
                     enemy_pos = event.enemy.get_pos()
                     hitmarker = Hitmarker(enemy_pos)
                     add_sprite_to_groups(hitmarker, all_sprites, hitmarker_sprites)
+                    spawn_buff(
+                        event.enemy.buff_spawn_chance,
+                        enemy_pos,
+                        buff_sprites,
+                        all_sprites,
+                    )
                     event.enemy.kill()
                     score = update_stats(player, score)
                     score_text.update_words(str(score))
                     enemy_num_text.update_words(str(len(enemy_sprites)))
 
             if event.type == PLAYER_HIT:
-                if not player.immune:
+                if (
+                    not player.immune and not player.star_buff_act
+                ):  # not immune and doesn't have star invulnerability
                     player.lives -= 1
                     lives_text.update_words(str(player.lives))
 
@@ -1915,6 +2220,14 @@ def main():
                     pygame.time.get_ticks() / 1000 - start_game_time - paused_time
                 )
                 store_game_info(score, player.level, wave, time_elapsed)
+
+                remove_pause_screen(
+                    pause_screen_sprites,
+                    all_sprites,
+                    screen_effect_sprites,
+                    text_sprites,
+                )
+
                 display_end_screen(
                     end_screen,
                     game_over_text,
@@ -2014,6 +2327,10 @@ def main():
                         )
                         start_pause_time = pygame.time.get_ticks() / 1000
                 # test keybinds
+                if event.key == pygame.K_4:
+                    player.lives = 0
+                if event.key == pygame.K_5:
+                    player.experience += 30
                 if event.key == pygame.K_6:
                     print("game_state:", game_state)
                     print("previous game state:", previous_game_state)
@@ -2021,10 +2338,6 @@ def main():
                     pygame.event.post(pygame.event.Event(PLAYER_HIT))
                 if event.key == pygame.K_8:
                     reset_game_results()
-                if event.key == pygame.K_4:
-                    player.lives = 0
-                if event.key == pygame.K_5:
-                    player.experience += 10
                 if event.key == pygame.K_9:
                     print(player.level)
                 if event.key == pygame.K_o:
@@ -2036,6 +2349,13 @@ def main():
                     print("down", player.acceleration_down)
                     print("x", player.x)
                     print("y", player.y)
+                if event.key == pygame.K_l:
+                    spawn_buff(
+                        100,
+                        (300.0, 300.0),
+                        buff_sprites,
+                        all_sprites,
+                    )
 
         ## Main game functions
 
@@ -2118,6 +2438,21 @@ def main():
                     enemy_bullet_sprites.sprites() + player_bullet_sprites.sprites()
                 ):
                     bullet.move()
+
+                for hitmarker in hitmarker_sprites.sprites():
+                    hitmarker.update_time()
+                    if hitmarker.check_timeout():
+                        hitmarker.kill()
+
+                buff_collision = pygame.sprite.spritecollide(
+                    player, buff_sprites, dokill=True
+                )
+
+                if buff_collision:
+                    for buff in buff_collision:
+                        player.apply_buff(type(buff))
+
+                # continue HERE with player colliding with a power up -> power up stuff
             case "game_over":
                 rotate_object(player)
 
@@ -2132,6 +2467,11 @@ def main():
                     enemy_bullet_sprites.sprites() + player_bullet_sprites.sprites()
                 ):
                     bullet.move()
+
+                for hitmarker in hitmarker_sprites.sprites():
+                    hitmarker.update_time()
+                    if hitmarker.check_timeout():
+                        hitmarker.kill()
 
         for meter in volume_meter_sprites:
             if meter.attr == "len(enemy_sprites)":
@@ -2153,14 +2493,12 @@ def main():
                     )
                 )
 
-        for hitmarker in hitmarker_sprites.sprites():
-            hitmarker.update_time()
-            if hitmarker.check_timeout():
-                hitmarker.kill()
-
         ## Updating objects
 
         all_sprites.update()
+
+        if game_state == "in_game":
+            point_object_to_object(player, mouse)
 
         adjust_thruster(thruster, player)
 
