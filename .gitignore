@@ -422,3 +422,4 @@ FodyWeavers.xsd
 
 # Krita
 *.~*
+*.kra
