@@ -1,12 +1,18 @@
-# Games
-A collection of *Pygame* games that I made.
+<div align="center">
+    <h1> Games </h1>
+    <blockquote>A collection of <em>Pygame</em> games that I made.</blockquote>
+    <br>
 
-## [Survoids](./survoids)
-A game similar to Vampire Survivors and Asteroids.
+![Made with Pygame-CE](https://img.shields.io/badge/Made_with-Pygame--CE-6AF02A?style=for-the-badge&logo=Python)
+</div>
 
+<div align="center">
+    <h2><a href="survoids">Survoids</a> <img src="assets/survoids.ico" width="28" height="28" align="absmiddle" alt="Survoids Icon"/></h2>
+    <blockquote>A <b>2D space shooter roguelike</b> game inspired by <em>Vampire Survivors</em> and <em>Asteroids</em>.</blockquote>
+</div>
 
 ## Skills Demonstrated Across All Games
- - **Languages, Libraries & Tools**: Python, Pygame-CE, GitHub, Git, PyInstaller, Ruff
+ - **Languages, Libraries & Tools**: Python, Pygame-CE, GitHub, Git, PyInstaller, Ruff, Krita
  - **Concepts & Practices**: Object-Oriented Programming, Dependency Injection, Data Persistence, Cross-Platform Distribution
 
 ## Getting Started
@@ -36,12 +42,12 @@ cd Games
 ```
 
 4. **Create a python environment.**
- - If you are on **Windows**, run:
+ - If you are on **Windows**, **run**:
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
 ```
- - If you are on **MacOS** or **Linux**, run:
+ - If you are on **MacOS** or **Linux**, **run**:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -56,12 +62,12 @@ python -m pip install -r requirements.txt
 How to run a specific game.
 
 #### Using the Game's Release
-1. Navigate to the **releases** tab and **find the game's latest Release**.
+1. Navigate to the **[releases](releases)** tab and **find the game's latest Release**.
 2. Follow the instructions *based on your operating system* to play.
 *Note: Only Windows and MacOS are supported for game releases. Linux users must run from source code.*
 
 ### Running from Source Code
-You must be in the **Games** directory in your terminal and in the same environment from **General Setup**.
+You must be in the **Games** directory in your *terminal* and in the *same environment* from **General Setup**.
 
 Then, run:
 ```bash
@@ -80,3 +86,6 @@ Replace *game_name* with the actual game name.
  - **Pygame Community Edition**
  - **Space Shooter Remastered Asset Pack** from *Kenney Assets*
  - **PyInstaller**
+
+### License
+This repository is licensed under the [MIT License](LICENSE).
