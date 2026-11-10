@@ -695,6 +695,104 @@ class Text(pygame.sprite.Sprite):
         self.set_position()
 
 
+class VolumeMeter(pygame.sprite.Sprite):
+    """The volume meter class.
+
+    Attributes:
+        x (float): The x coordinate of the volume meter.
+        y (float): The y coordinate of the volume meter.
+        width (int): The width of the volume meter.
+        max_vol (int | float): The maximum volume of the volume meter.
+        current_vol (int | float): The current volume of the volume meter.
+        height (int): The height of the volume meter.
+        front_colour (tuple[int, int, int]): The RGB value of the current volume in the volume meter.
+        back_colour (tuple[int, int, int]): The RGB value of the maximum volume in the volume meter.
+        obj (pygame.sprite.Sprite | None): The object that the volume meter is assigned to.
+        attr (str | None): The attribute of the object or variable that the volume meter is assigned to.
+    """
+    def __init__(
+                self,
+                pos: tuple[int, int],
+                initial_val: int | float,
+                width: int,
+                height: int,
+                front_colour: tuple[int, int, int],
+                back_colour: tuple[int, int, int] = (255, 255, 255),
+                *,
+                obj: pygame.sprite.Sprite | None = None,
+                attr: str | None = None):
+        """Initialises the volume meter class.
+
+        Args:
+            pos (tuple[int, int]): The left top position of the volume meter.
+            initial_val (int | float): The initial value of the volume meter.
+            width (int): The width of the volume meter.
+            height (int): The height of the volume meter.
+            front_colour (tuple[int, int, int]): The front colour of the volume meter.
+            back_colour (tuple[int, int, int], optional): The colour of the background of the volume meter.. Defaults to (255, 255, 255).
+            obj (pygame.sprite.Sprite | None, optional): The object that the volume meter is assigned to. Defaults to None.
+            attr (str | None, optional): The attribute of the object or variable that the volume meter is assigned to. Defaults to None.
+        """
+        super().__init__()
+        self._layer = 6
+
+        self.x = float(pos[0])
+        self.y = float(pos[1])
+        self.width = width
+        self.max_vol = initial_val
+        self.current_vol = width
+        self.height = height
+        self.front_colour = front_colour
+        self.back_colour = back_colour
+
+        self.obj = obj
+        self.attr = attr
+
+    def update_max_vol(self, *new_max_vol):
+        """Updates the maximum volume variable.
+
+        Args:
+            new_attr (tuple[int | float]): The new maximum volume if the volume meter is assigned to a variable.
+        """
+        if self.obj and self.attr:
+            self.max_vol = getattr(self.obj, self.attr)
+        elif self.attr:
+            self.max_vol = new_max_vol[0]
+        else:
+            pass
+
+    def update_current_vol(self, *new_vol):
+        """Updates the current volume variable.
+
+        Args:
+            new_attr (tuple[int | float]): The new current volume if the volume meter is assigned to a variable.
+        """
+        if self.obj and self.attr:
+            self.current_vol = getattr(self.obj, self.attr)
+        elif self.attr:
+            self.current_vol = new_vol[0]
+        else:
+            pass
+
+    def draw(self, screen):
+        """Draws the volume meter.
+
+        Args:
+            screen (Surface): The pygame screen.
+        """
+        back_rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        volume_rect = pygame.Rect(self.x, self.y, (self.current_vol / self.max_vol) * self.width, self.height)
+
+        pygame.draw.rect(screen, self.back_colour, back_rect)
+        pygame.draw.rect(screen, self.front_colour, volume_rect)
+
+    def update(self):
+        """Updates the volume meter's position if necessary."""
+        if self.obj:
+            self.x = getattr(self.obj, "self.x")
+            self.y = getattr(self.obj, "self.y")
+
+
 class ScreenEffect(pygame.sprite.Sprite):
     """The screen effect class.
 
@@ -926,6 +1024,7 @@ def spawn_waves(
             wave_clear_sprites: pygame.sprite.Group,
             wave_info_sprites: pygame.sprite.Group,
             wave_num_text: Text,
+            wave_bar: VolumeMeter,
             enemy_num_text: Text,
             wave: int,
             wave_value: int,
@@ -940,6 +1039,7 @@ def spawn_waves(
         wave_clear_sprites (pygame.sprite.Group): The wave clear sprites group.
         wave_info_sprites (pygame.sprite.Group): The wave info sprites group.
         wave_num_text (Text): The wave and wave number text object.
+        wave_bar (VolumeMeter): The bar for the number of enemies in the wave.
         enemy_num_text (Text): The number of alive enemies in the current wave.
         wave (int): The wave number.
         wave_value (int): The value of the current wave.
@@ -965,6 +1065,7 @@ def spawn_waves(
             wave_value += 10
             wave += 1
             wave_num_text.update_words(f"Wave {wave}")
+            wave_bar.update_max_vol(len(enemy_wave))
             enemy_num_text.update_words(str(len(enemy_sprites)))
         else:
             if wave_info_sprites:
@@ -1105,6 +1206,7 @@ def display_user_interface(
             player_x_ui: UserInterface,
             player_life_icon: UserInterface,
             wave_num_text: Text,
+            wave_bar: VolumeMeter,
             enemy_icon: UserInterface,
             enemy_x_ui: UserInterface,
             enemy_num_text: Text,
@@ -1113,7 +1215,8 @@ def display_user_interface(
             all_sprites: pygame.sprite.LayeredUpdates,
             user_interface_sprites: pygame.sprite.Group,
             wave_info_sprites: pygame.sprite.Group,
-            text_sprites: pygame.sprite.Group
+            text_sprites: pygame.sprite.Group,
+            volume_meter_sprites: pygame.sprite.Group
 ) -> None:
     """Displays the user interface objects.
 
@@ -1124,18 +1227,22 @@ def display_user_interface(
         enemy_icon (UserInterface): The enemy icon object.
         enemy_x_ui (UserInterface): The X user interface object next to the enemy number icon.
         enemy_num_text (Text): The number of alive enemies in the current wave.
+        wave_bar (VolumeMeter): The volume meter for the number of enemies.
         lives_text (Text): The lives text object.
         score_text (Text): The score text object.
         all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
         user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
         wave_info_sprites (pygame.sprite.Group): The wave info sprites group.
-        text_sprites (pygame.sprite.Group): The text sprites object.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+        volume_meter_sprites (pygame.sprite.Group): The volume meter sprites group.
     """
     add_sprite_to_groups(player_x_ui, all_sprites, user_interface_sprites)
 
     add_sprite_to_groups(player_life_icon, all_sprites, user_interface_sprites)
 
     add_sprite_to_groups(wave_num_text, all_sprites, text_sprites, wave_info_sprites)
+
+    add_sprite_to_groups(wave_bar, all_sprites, volume_meter_sprites, wave_info_sprites)
 
     add_sprite_to_groups(enemy_icon, all_sprites, user_interface_sprites, wave_info_sprites)
 
@@ -1393,6 +1500,8 @@ def main():
     wave_clear_sprites = pygame.sprite.Group()
     power_up_text_sprites = pygame.sprite.Group()
 
+    volume_meter_sprites = pygame.sprite.Group()
+
     screen_effect_sprites = pygame.sprite.Group()
 
 
@@ -1426,6 +1535,8 @@ def main():
 
     wave_num_text = Text(f"Wave {wave}", "kenvector_future_thin", 30, "midtop", (300, 4))
 
+    wave_bar = VolumeMeter((50, 80), len(enemy_sprites), 500, 5, (0, 120, 200), (255, 255, 255), obj=None, attr="len(enemy_sprites)")
+
     enemy_x_ui = UserInterface("x.png", 17, 17, (300, 57))
 
     enemy_icon = UserInterface("enemy_icon.png", 31, 27, (272, 57), True)
@@ -1456,7 +1567,7 @@ def main():
             if event.type == START_GAME:
                 remove_main_screen(main_screen_sprites, all_sprites, text_sprites, user_interface_sprites)
                 display_player(player, thruster, all_sprites)
-                display_user_interface(player_x_ui, player_life_icon, wave_num_text, enemy_icon, enemy_x_ui, enemy_num_text, lives_text, score_text, all_sprites, user_interface_sprites, wave_info_sprites, text_sprites)
+                display_user_interface(player_x_ui, player_life_icon, wave_num_text, wave_bar, enemy_icon, enemy_x_ui, enemy_num_text, lives_text, score_text, all_sprites, user_interface_sprites, wave_info_sprites, text_sprites, volume_meter_sprites)
                 game_state, previous_game_state = update_game_state(game_state, previous_game_state, "in_game")
                 start_game_time = pygame.time.get_ticks() / 1000
 
@@ -1569,7 +1680,7 @@ def main():
 
                 fire_bullet(player, all_sprites, player_bullet_sprites)
 
-                wave_value, wave, wave_delay = spawn_waves(all_sprites, enemy_sprites, text_sprites, wave_clear_sprites, wave_info_sprites, wave_num_text, enemy_num_text, wave, wave_value, wave_delay)
+                wave_value, wave, wave_delay = spawn_waves(all_sprites, enemy_sprites, text_sprites, wave_clear_sprites, wave_info_sprites, wave_num_text, wave_bar, enemy_num_text, wave, wave_value, wave_delay)
 
                 if pygame.sprite.spritecollideany(player, enemy_sprites, pygame.sprite.collide_rect_ratio(0.8)):
                     pygame.event.post(pygame.event.Event(PLAYER_HIT))
@@ -1584,6 +1695,12 @@ def main():
                     player.check_immunity()
 
                 thruster.update_visibility()
+
+                for meter in volume_meter_sprites:
+                    if meter.attr == "len(enemy_sprites)":
+                        meter.update_current_vol(len(enemy_sprites))
+                    else:
+                        meter.update_current_vol()
 
                 for enemy in enemy_sprites:
                     enemy.move()
@@ -1633,6 +1750,8 @@ def main():
         for entity in all_sprites:
             if isinstance(entity, Text) or isinstance(entity, ScreenEffect):
                 screen.blit(entity.surf, entity.rect)
+            elif isinstance(entity, VolumeMeter):
+                entity.draw(screen)
             else:
                 if not(isinstance(entity, Thruster) and entity.visibility == False):
                     screen.blit(entity.image, entity.rect)
