@@ -1,7 +1,7 @@
 # Author: prixdj
 # Date created: 15/02/2026
-# Date updated: 06/11/2026
-# Version: 0.3.2
+# Date updated: 07/11/2026
+# Version: 1.0.0
 # Description: A game like asteroids and vampire survivors
 
 ## Takeaways for Future Projects
@@ -26,6 +26,10 @@
 # Make text more unique
 # Make exp drop and be collected / move towards the player
 # Use more @'s and _'s for functions to properly define them
+# Better scaling
+# Better hitboxes
+# More enemies
+# Changing image of the player as a setting
 # Much more
 
 
@@ -83,7 +87,7 @@ class CustomEvent:
 # 4 - Hitmarker
 # 5 - Thruster
 # 6 - Player
-# 7 - UserInterface
+# 7 - UserInterface and VolumeMeter
 # 8 - Text
 # 9 - ScreenEffect
 # 10 - Mouse
@@ -629,6 +633,108 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.centery = round(self.y)
 
 
+class VolumeMeter(pygame.sprite.Sprite):
+    """The volume meter class.
+
+    Attributes:
+        x (float): The x coordinate of the volume meter.
+        y (float): The y coordinate of the volume meter.
+        width (int): The width of the volume meter.
+        max_vol (int | float): The maximum volume of the volume meter.
+        current_vol (int | float): The current volume of the volume meter.
+        height (int): The height of the volume meter.
+        front_colour (tuple[int, int, int]): The RGB value of the current volume in the volume meter.
+        back_colour (tuple[int, int, int]): The RGB value of the maximum volume in the volume meter.
+        obj (pygame.sprite.Sprite | None): The object that the volume meter is assigned to.
+        attr (str | None): The attribute of the object or variable that the volume meter is assigned to.
+    """
+
+    def __init__(
+        self,
+        pos: tuple[int | float, int | float],
+        initial_val: int | float,
+        width: int,
+        height: int,
+        front_colour: tuple[int, int, int],
+        back_colour: tuple[int, int, int] = (255, 255, 255),
+        *,
+        obj: pygame.sprite.Sprite | None = None,
+        attr: str | None = None,
+    ):
+        """Initialises the volume meter class.
+
+        Args:
+            pos (tuple[int | float, int | float]): The left top position of the volume meter.
+            initial_val (int | float): The initial value of the volume meter.
+            width (int): The width of the volume meter.
+            height (int): The height of the volume meter.
+            front_colour (tuple[int, int, int]): The front colour of the volume meter.
+            back_colour (tuple[int, int, int], optional): The colour of the background of the volume meter.. Defaults to (255, 255, 255).
+            obj (pygame.sprite.Sprite | None, optional): The object that the volume meter is assigned to. Defaults to None.
+            attr (str | None, optional): The attribute of the object or variable that the volume meter is assigned to. Defaults to None.
+        """
+        super().__init__()
+        self._layer = 7
+
+        self.x = float(pos[0])
+        self.y = float(pos[1])
+        self.width = width
+        self.max_vol = initial_val
+        self.current_vol = width
+        self.height = height
+        self.front_colour = front_colour
+        self.back_colour = back_colour
+
+        self.obj = obj
+        self.attr = attr
+
+    def update_max_vol(self, *new_max_vol):
+        """Updates the maximum volume variable.
+
+        Args:
+            new_attr (tuple[int | float]): The new maximum volume if the volume meter is assigned to a variable.
+        """
+        if self.obj and self.attr:
+            self.max_vol = getattr(self.obj, self.attr)
+        elif self.attr:
+            self.max_vol = new_max_vol[0]
+        else:
+            pass
+
+    def update_current_vol(self, *new_vol):
+        """Updates the current volume variable.
+
+        Args:
+            new_attr (tuple[int | float]): The new current volume if the volume meter is assigned to a variable.
+        """
+        if self.obj and self.attr:
+            self.current_vol = getattr(self.obj, self.attr)
+        elif self.attr:
+            self.current_vol = new_vol[0]
+        else:
+            pass
+
+    def draw(self, screen):
+        """Draws the volume meter.
+
+        Args:
+            screen (Surface): The pygame screen.
+        """
+        back_rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        volume_rect = pygame.Rect(
+            self.x, self.y, (self.current_vol / self.max_vol) * self.width, self.height
+        )
+
+        pygame.draw.rect(screen, self.back_colour, back_rect)
+        pygame.draw.rect(screen, self.front_colour, volume_rect)
+
+    def update(self):
+        """Updates the volume meter's position if necessary."""
+        if self.obj:
+            self.x = getattr(self.obj, "x") - getattr(self.obj, "width")/2
+            self.y = getattr(self.obj, "y") + getattr(self.obj, "height")/2 + getattr(self.obj, "health_bar_offset")
+
+
 class Enemy(pygame.sprite.Sprite):
     """The base enemy class.
 
@@ -662,6 +768,7 @@ class Enemy(pygame.sprite.Sprite):
         size: tuple = (26, 21),
         speed: int | float = 2,
         hp: int = 1,
+        health_bar: VolumeMeter | None = None,
     ):
         """Initialises the enemy object.
 
@@ -669,7 +776,8 @@ class Enemy(pygame.sprite.Sprite):
             img (str, optional): The png of the enemy image. Defaults to "enemy_a.png".
             size (tuple, optional): The size the enemy should be scaled to. Defaults to (26, 21).
             speed (int | float, optional): The speed of the enemy. Defaults to 2.
-            hp (int): The health points of the enemy. Defaults to 1.
+            hp (int, optional): The health points of the enemy. Defaults to 1.
+            health_bar (VolumneMeter | None, optional): The associated health bar of the enemy.
         """
         super().__init__()
         self._layer = 2
@@ -680,8 +788,14 @@ class Enemy(pygame.sprite.Sprite):
         self.surf = pygame.Surface(size)
         self.rect = self.surf.get_rect()
 
+        self.width = size[0]
+        self.height = size[1]
+
         self.SPEED = speed
         self.hp = hp
+
+        self.health_bar = health_bar
+        self.health_bar_offset = 0
 
         self.angle = rand.randint(0, 360)
         self.radians = -math.radians(self.angle)
@@ -816,13 +930,15 @@ class EnemyBoss(Enemy):
         buff_spawn_chance (int): The chance that the Enemy class spawns a buff on death out of 100.
     """
 
-    value = 60
+    value = 80
     likelihood = 0
     buff_spawn_chance = 100
 
     def __init__(self):
         """Initialises the Boss type enemy with the enemy_boss.png, full size and a speed of 0.5."""
-        super().__init__(img="enemy_boss.png", size=(26, 21), speed=0.5, hp=15)
+        super().__init__(img="enemy_boss.png", size=(194, 168), speed=0.8, hp=30)
+
+        self.health_bar_offset = self.height/4
 
 
 class Hitmarker(pygame.sprite.Sprite):
@@ -1120,108 +1236,6 @@ class UserInterface(pygame.sprite.Sprite):
             self.clicked = new_clicked
 
 
-class VolumeMeter(pygame.sprite.Sprite):
-    """The volume meter class.
-
-    Attributes:
-        x (float): The x coordinate of the volume meter.
-        y (float): The y coordinate of the volume meter.
-        width (int): The width of the volume meter.
-        max_vol (int | float): The maximum volume of the volume meter.
-        current_vol (int | float): The current volume of the volume meter.
-        height (int): The height of the volume meter.
-        front_colour (tuple[int, int, int]): The RGB value of the current volume in the volume meter.
-        back_colour (tuple[int, int, int]): The RGB value of the maximum volume in the volume meter.
-        obj (pygame.sprite.Sprite | None): The object that the volume meter is assigned to.
-        attr (str | None): The attribute of the object or variable that the volume meter is assigned to.
-    """
-
-    def __init__(
-        self,
-        pos: tuple[int, int],
-        initial_val: int | float,
-        width: int,
-        height: int,
-        front_colour: tuple[int, int, int],
-        back_colour: tuple[int, int, int] = (255, 255, 255),
-        *,
-        obj: pygame.sprite.Sprite | None = None,
-        attr: str | None = None,
-    ):
-        """Initialises the volume meter class.
-
-        Args:
-            pos (tuple[int, int]): The left top position of the volume meter.
-            initial_val (int | float): The initial value of the volume meter.
-            width (int): The width of the volume meter.
-            height (int): The height of the volume meter.
-            front_colour (tuple[int, int, int]): The front colour of the volume meter.
-            back_colour (tuple[int, int, int], optional): The colour of the background of the volume meter.. Defaults to (255, 255, 255).
-            obj (pygame.sprite.Sprite | None, optional): The object that the volume meter is assigned to. Defaults to None.
-            attr (str | None, optional): The attribute of the object or variable that the volume meter is assigned to. Defaults to None.
-        """
-        super().__init__()
-        self._layer = 7
-
-        self.x = float(pos[0])
-        self.y = float(pos[1])
-        self.width = width
-        self.max_vol = initial_val
-        self.current_vol = width
-        self.height = height
-        self.front_colour = front_colour
-        self.back_colour = back_colour
-
-        self.obj = obj
-        self.attr = attr
-
-    def update_max_vol(self, *new_max_vol):
-        """Updates the maximum volume variable.
-
-        Args:
-            new_attr (tuple[int | float]): The new maximum volume if the volume meter is assigned to a variable.
-        """
-        if self.obj and self.attr:
-            self.max_vol = getattr(self.obj, self.attr)
-        elif self.attr:
-            self.max_vol = new_max_vol[0]
-        else:
-            pass
-
-    def update_current_vol(self, *new_vol):
-        """Updates the current volume variable.
-
-        Args:
-            new_attr (tuple[int | float]): The new current volume if the volume meter is assigned to a variable.
-        """
-        if self.obj and self.attr:
-            self.current_vol = getattr(self.obj, self.attr)
-        elif self.attr:
-            self.current_vol = new_vol[0]
-        else:
-            pass
-
-    def draw(self, screen):
-        """Draws the volume meter.
-
-        Args:
-            screen (Surface): The pygame screen.
-        """
-        back_rect = pygame.Rect(self.x, self.y, self.width, self.height)
-        volume_rect = pygame.Rect(
-            self.x, self.y, (self.current_vol / self.max_vol) * self.width, self.height
-        )
-
-        pygame.draw.rect(screen, self.back_colour, back_rect)
-        pygame.draw.rect(screen, self.front_colour, volume_rect)
-
-    def update(self):
-        """Updates the volume meter's position if necessary."""
-        if self.obj:
-            self.x = getattr(self.obj, "self.x")
-            self.y = getattr(self.obj, "self.y")
-
-
 class ScreenEffect(pygame.sprite.Sprite):
     """The screen effect class.
 
@@ -1429,6 +1443,7 @@ def spawn_enemies(
     enemy_wave: list[type[Enemy]],
     all_sprites: pygame.sprite.LayeredUpdates,
     enemy_sprites: pygame.sprite.Group,
+    volume_meter_sprites: pygame.sprite.Group,
 ) -> None:
     """Spawns the enemies in the given wave.
 
@@ -1436,9 +1451,27 @@ def spawn_enemies(
         enemy_wave (list[type[Enemy]]): The list of enemy classes to be spawned.
         all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
         enemy_sprites (pygame.sprite.Group): The enemy sprites group for the enemy to be added to.
+        volume_meter_sprites (pygame.sprite.Group): The volume meter sprites for the enemy's health bar if required.
     """
     for enemy in enemy_wave:
-        new_enemy = enemy()
+        if enemy == EnemyBoss:
+            new_enemy = enemy()
+            health_bar = VolumeMeter(
+                (
+                    new_enemy.x - new_enemy.width / 2,
+                    new_enemy.y + new_enemy.height / 2 + new_enemy.health_bar_offset,
+                ),
+                new_enemy.hp,
+                174,
+                16,
+                (115, 6, 6),
+                obj=new_enemy,
+                attr="hp",
+            )
+            new_enemy.health_bar = health_bar
+            add_sprite_to_groups(health_bar, all_sprites, volume_meter_sprites)
+        else:
+            new_enemy = enemy()
         add_sprite_to_groups(new_enemy, all_sprites, enemy_sprites)
 
 
@@ -1454,15 +1487,15 @@ def calc_wave(wave_value: int) -> list[type[Enemy]]:
     enemy_wave: list[type[Enemy]] = []
     enemy_types: list[type[Enemy]] = Enemy.__subclasses__()
     enemy_likelihood: list[type[Enemy]] = []
-    current_wave_value: int = wave_value
+    current_wave_value = wave_value
 
     for enemy_type in enemy_types:
         for _ in range(enemy_type.likelihood):
             enemy_likelihood.append(enemy_type)
 
     while current_wave_value >= 5:  # smallest enemy value is 5
-        random_num: int = rand.randrange(0, len(enemy_likelihood))
-        enemy_type: type[Enemy] = enemy_likelihood[random_num]
+        random_num = rand.randrange(0, len(enemy_likelihood))
+        enemy_type = enemy_likelihood[random_num]
 
         if current_wave_value - enemy_type.value < 0:
             continue
@@ -1473,11 +1506,19 @@ def calc_wave(wave_value: int) -> list[type[Enemy]]:
     return enemy_wave
 
 
-def change_enemy_likelihoods() -> None:
-    """Temp function that changes the likelihood values of the enemy classes."""
+def change_enemy_likelihoods(wave: int) -> None:
+    """Temp function that changes the likelihood values of the enemy classes.
+
+    Args:
+        wave (int): The current wave number.
+    """
     EnemyA.likelihood -= 1
     EnemyB.likelihood += 1
     EnemyC.likelihood += 1
+    if wave % 8 == 0 and wave != 0:
+        EnemyBoss.likelihood += 1000
+    elif wave % 8 == 1 and wave != 1:
+        EnemyBoss.likelihood -= 984
 
 
 def spawn_waves(
@@ -1486,6 +1527,7 @@ def spawn_waves(
     text_sprites: pygame.sprite.Group,
     wave_clear_sprites: pygame.sprite.Group,
     wave_info_sprites: pygame.sprite.Group,
+    volume_meter_sprites: pygame.sprite.Group,
     wave_num_text: Text,
     wave_bar: VolumeMeter,
     enemy_num_text: Text,
@@ -1501,6 +1543,7 @@ def spawn_waves(
         text_sprites (pygame.sprite.Group): The text sprites group.
         wave_clear_sprites (pygame.sprite.Group): The wave clear sprites group.
         wave_info_sprites (pygame.sprite.Group): The wave info sprites group.
+        volume_meter_sprites (pygame.sprite.Group): The volume meter sprites group.
         wave_num_text (Text): The wave and wave number text object.
         wave_bar (VolumeMeter): The bar for the number of enemies in the wave.
         enemy_num_text (Text): The number of alive enemies in the current wave.
@@ -1517,16 +1560,19 @@ def spawn_waves(
             wave_delay = WAVE_HOLDOFF
 
         if wave_delay <= 0:
+            kill_sprite_group(wave_clear_sprites)
+
             if any(sprite not in all_sprites for sprite in wave_info_sprites):
                 redisplay_wave_info(all_sprites, wave_info_sprites)
 
-            enemy_wave = calc_wave(wave_value)
-            spawn_enemies(enemy_wave, all_sprites, enemy_sprites)
-
-            kill_sprite_group(wave_clear_sprites)
-            change_enemy_likelihoods()
             wave_value += 10
             wave += 1
+
+            change_enemy_likelihoods(wave)
+
+            enemy_wave = calc_wave(wave_value)
+            spawn_enemies(enemy_wave, all_sprites, enemy_sprites, volume_meter_sprites)
+
             wave_num_text.update_words(f"Wave {wave}")
             wave_bar.update_max_vol(len(enemy_wave))
             enemy_num_text.update_words(str(len(enemy_sprites)))
@@ -2060,7 +2106,7 @@ def write_new_control(control_name: str, new_control_word: str) -> None:
         file_lines = file.readlines()
 
     for line_num in range(len(file_lines)):
-        if file_lines[line_num][:len(control_name)] == control_name:
+        if file_lines[line_num][: len(control_name)] == control_name:
             file_lines[line_num] = f"{control_name}: {new_control_word}\n"
             break
 
@@ -2247,16 +2293,21 @@ def redisplay_wave_info(
         add_sprite_to_groups(sprite, all_sprites)
 
 
-def update_stats(player: Player, score: int) -> int:
+def update_stats(player: Player, score: int, enemy_type: type[Enemy]) -> int:
     """Updates the stats of score and player experience.
 
     Args:
         player (Player): The player object.
         score (int): The score number.
+        enemy_type (Enemy): The type of the killed enemy.
 
     Returns:
         int: Updated score number.
     """
+    if enemy_type == EnemyBoss:
+        player.experience += 40
+        return score + 200
+
     player.experience += 4
     return score + 20
 
@@ -2480,7 +2531,7 @@ def main():
 
     score = 0
 
-    wave_value = 10
+    wave_value = 0
     wave = 0
     wave_delay = 0
 
@@ -2625,7 +2676,7 @@ def main():
     controls_title_text = Text("CONTROLS", "kenvector_future", 40, "midtop", (300, 55))
 
     up_control_word = Text(
-        controls['Up'],
+        controls["Up"],
         "kenvector_future_thin",
         55,
         "midleft",
@@ -2639,7 +2690,7 @@ def main():
     )
 
     down_control_word = Text(
-        controls['Down'],
+        controls["Down"],
         "kenvector_future_thin",
         55,
         "midleft",
@@ -2653,7 +2704,7 @@ def main():
     )
 
     left_control_word = Text(
-        controls['Left'],
+        controls["Left"],
         "kenvector_future_thin",
         55,
         "midleft",
@@ -2667,7 +2718,7 @@ def main():
     )
 
     right_control_word = Text(
-        controls['Right'],
+        controls["Right"],
         "kenvector_future_thin",
         55,
         "midleft",
@@ -2681,7 +2732,7 @@ def main():
     )
 
     shoot_control_word = Text(
-        controls['Shoot'],
+        controls["Shoot"],
         "kenvector_future_thin",
         55,
         "midleft",
@@ -2885,9 +2936,11 @@ def main():
                             buff_sprites,
                             all_sprites,
                         )
-                        event.enemy.kill()
-                        score = update_stats(player, score)
+                        score = update_stats(player, score, type(event.enemy))
                         score_text.update_words(str(score))
+                        if event.enemy.health_bar:
+                            event.enemy.health_bar.kill()
+                        event.enemy.kill()
                         enemy_num_text.update_words(str(len(enemy_sprites)))
 
                 case CustomEvent.PLAYER_HIT:
@@ -2961,7 +3014,7 @@ def main():
 
                     score = 0
 
-                    wave_value = 10
+                    wave_value = 0
                     wave = 0
                     wave_delay = 0
 
@@ -3001,16 +3054,31 @@ def main():
                     break
 
                 case pygame.KEYDOWN if is_changing_control:
-                    for control in [up_control_button, down_control_button, left_control_button, right_control_button, shoot_control_button]:
+                    for control in [
+                        up_control_button,
+                        down_control_button,
+                        left_control_button,
+                        right_control_button,
+                        shoot_control_button,
+                    ]:
                         if control.clicked:
                             if control.associated_text:
-                                controls[control.associated_text.associated_word] = pygame.key.name(event.key)
-                                control.associated_text.update_words(pygame.key.name(event.key))
-                                write_new_control(control.associated_text.associated_word, pygame.key.name(event.key))
+                                controls[control.associated_text.associated_word] = (
+                                    pygame.key.name(event.key)
+                                )
+                                control.associated_text.update_words(
+                                    pygame.key.name(event.key)
+                                )
+                                write_new_control(
+                                    control.associated_text.associated_word,
+                                    pygame.key.name(event.key),
+                                )
                                 is_changing_control = False
                                 control.change_clicked(False)
                             else:
-                                print("Could not find associated text for a control button.")
+                                print(
+                                    "Could not find associated text for a control button."
+                                )
 
                 case pygame.MOUSEBUTTONDOWN:
                     if event.button == 1:
@@ -3255,7 +3323,12 @@ def main():
                                 all_sprites,
                             )
                         case pygame.K_u:
-                            reset_controls_file()
+                            spawn_enemies(
+                                [EnemyBoss],
+                                all_sprites,
+                                enemy_sprites,
+                                volume_meter_sprites,
+                            )
 
         ## Main game functions
 
@@ -3360,6 +3433,7 @@ def main():
                     text_sprites,
                     wave_clear_sprites,
                     wave_info_sprites,
+                    volume_meter_sprites,
                     wave_num_text,
                     wave_bar,
                     enemy_num_text,
@@ -3369,7 +3443,7 @@ def main():
                 )
 
                 if pygame.sprite.spritecollideany(
-                    player, enemy_sprites, pygame.sprite.collide_rect_ratio(0.8)
+                    player, enemy_sprites, pygame.sprite.collide_rect_ratio(0.5)
                 ):
                     pygame.event.post(pygame.event.Event(CustomEvent.PLAYER_HIT))
 
