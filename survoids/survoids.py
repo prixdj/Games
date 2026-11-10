@@ -1,12 +1,18 @@
-# Author: me
+# Author: prixdj
 # Date created: 15/02/2026
-# Date updated: 28/05/2026
-# Version: 0.1.2
+# Date updated: 16/06/2026
+# Version: 0.1.3
 # Description: A game like asteroids and vampire survivors
 
 ## Improvements
 
-# more enemy types
+# Even more enemy types
+# Fix spawn radius
+# Enemy count
+# Better documentation
+# Main screen
+# Controls screen
+# Previous runs thing
 
 
 ## Imports
@@ -40,8 +46,10 @@ enemy_number = 0
 
 score = 0
 
+wave_value = 10
 wave = 0
-wave_cleared = 0
+WAVE_HOLDOFF = 120
+wave_delay = 0
 
 
 ## Events
@@ -105,19 +113,19 @@ def fire_bullet(player):
     keyboard = pygame.key.get_pressed()
     if player.bullet_delay <= 0:
         if keyboard[K_SPACE]:
-            bullet = Bullet(player.get_angle(), player.get_pos())
+            bullet = Bullet(player.get_angle(), player.get_pos(), "bullet.png", (4, 24), 25)
             all_sprites.add(bullet)
-            bullet_sprites.add(bullet)
+            player_bullet_sprites.add(bullet)
             player.bullet_delay = player.bullet_holdoff
     else:
         player.bullet_delay -= 1
 
 
-def spawn_enemies(enemy_number):
-    for i in range(enemy_number):
-        enemy = Enemy()
-        all_sprites.add(enemy)
-        enemy_sprites.add(enemy)
+def spawn_enemies(enemy_wave:list):
+    for enemy in enemy_wave:
+        new_enemy = enemy()
+        all_sprites.add(new_enemy)
+        enemy_sprites.add(new_enemy)
 
 
 def end_wave():
@@ -127,13 +135,68 @@ def end_wave():
         return False
 
 
+def display_wave_clear():
+    wave_clear = Text(f"Wave {wave} Cleared", "kenvector_future_thin", 60)
+    wave_clear.rect.center = (300, 280)
+    all_sprites.add(wave_clear)
+    text_sprites.add(wave_clear)
+    wave_clear_sprites.add(wave_clear)
+
+
+def remove_wave_clear():
+    for text in wave_clear_sprites:
+        all_sprites.remove(text)
+        text_sprites.remove(text)
+    wave_clear_sprites.empty()
+
+
+def calc_wave() -> list:
+    enemy_wave = []
+    enemy_types = [EnemyA, EnemyB]
+    enemy_likelihood = []
+    current_wave_value = wave_value
+
+    for enemy_type in enemy_types:
+        for _ in range(enemy_type.likelihood):
+            enemy_likelihood.append(enemy_type)
+
+    while current_wave_value >= 5:  # smallest enemy value is 5
+        random_num = rand.randrange(0, len(enemy_likelihood))
+        enemy_type = enemy_likelihood[random_num]
+
+        if current_wave_value - enemy_type.value < 0:
+            continue
+
+        enemy_wave.append(enemy_type)
+        current_wave_value -= enemy_type.value
+    
+    return enemy_wave
+
+
+def change_enemy_likelihoods():
+    EnemyA.likelihood -= 1
+    EnemyB.likelihood += 1
+
+
 def spawn_waves():
     global wave
-    global enemy_number
+    global wave_value
+    global wave_delay
     if end_wave() == True:
-        enemy_number += 2
-        spawn_enemies(enemy_number)
-        wave += 1
+        if not wave_clear_sprites and wave != 0:
+            display_wave_clear()
+            wave_delay = WAVE_HOLDOFF
+        
+        if wave_delay <= 0:
+            enemy_wave = calc_wave()
+            spawn_enemies(enemy_wave)
+
+            remove_wave_clear()
+            change_enemy_likelihoods()
+            wave_value += 10
+            wave += 1
+        else:
+            wave_delay -= 1
 
 
 def update_text(lives:int):
@@ -167,11 +230,12 @@ def check_game_over(lives:int):
 def display_powers():
     if player.bullet_holdoff > 6:
         lightning_power = Power((224, 483), "powerup1.png")
-        all_sprites.add(lightning_power)
-        power_sprites.add(lightning_power)
     else:
         lightning_power = Power((224, 483), "poweruplocked.png")
     
+    all_sprites.add(lightning_power)
+    power_sprites.add(lightning_power)
+
     lightning_text = Text("(1)", "kenvector_future_thin", 8)
     lightning_text.rect.midtop = (224, 520)
     all_sprites.add(lightning_text)
@@ -180,11 +244,11 @@ def display_powers():
     
     if player.acceleration_speed < 0.8:
         speed_power = Power((300, 483), "powerup2.png")
-        all_sprites.add(speed_power)
-        power_sprites.add(speed_power)
     else:
         speed_power = Power((300, 483), "poweruplocked.png")
 
+    all_sprites.add(speed_power)
+    power_sprites.add(speed_power)
     speed_text = Text("(2)", "kenvector_future_thin", 8)
     speed_text.rect.midtop = (300, 520)
     all_sprites.add(speed_text)
@@ -225,7 +289,7 @@ def store_game_info(score:int, level:int, wave:int):
         game_results.write(f"Score: {score}\n")
         game_results.write(f"Wave: {wave}\n")
         game_results.write(f"Level: {level}\n")
-        game_results.write(f"Time elapsed: {time_elapsed:.2f}\n")
+        game_results.write(f"Time elapsed: {time_elapsed:.2f}s\n\n")
 
 
 def change_to_end_screen():
@@ -442,20 +506,21 @@ class Thruster(pygame.sprite.Sprite):
 
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, player_angle:float, player_pos:tuple):
+    def __init__(self, angle:float, pos:tuple, img:str, size:tuple, speed:int):
         super().__init__()
         self._layer = 1
 
-        unscaled_image = pygame.image.load('survoids/images/bullet.png').convert_alpha()
-        self.image = pygame.transform.scale(unscaled_image, (4.5, 25.5))
-        self.original_image = pygame.transform.scale(unscaled_image, (4.5, 25.5))
-        self.surf = pygame.Surface((4.5, 25.5))
-        self.rect = self.surf.get_rect(center = player_pos)
+        unscaled_image = pygame.image.load(f'survoids/images/{img}').convert_alpha()
+        self.image = pygame.transform.scale(unscaled_image, size)
+        self.original_image = pygame.transform.scale(unscaled_image, size)
+        self.surf = pygame.Surface(size)
+        self.rect = self.surf.get_rect(center = pos)
 
-        self.angle = player_angle
+        self.angle = angle
         self.image = pygame.transform.rotate(self.original_image, self.angle)
         self.rect = self.image.get_rect(center = self.rect.center)
-        self.SPEED = 25
+
+        self.SPEED = speed
     
     def update(self):
         angle = -math.radians(self.angle)
@@ -467,22 +532,29 @@ class Bullet(pygame.sprite.Sprite):
 
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self):
+    value:int = 0
+    likelihood:int = 0
+
+    def __init__(self, img:str, size:tuple, speed:int|float):
         super().__init__()
         self._layer = 2
 
-        unscaled_image = pygame.image.load('survoids/images/enemy_a.png').convert_alpha()
-        self.image = pygame.transform.scale(unscaled_image, (21, 21))
-        self.original_image = pygame.transform.scale(unscaled_image, (25, 21))
-        self.surf = pygame.Surface((25, 21))
+        unscaled_image = pygame.image.load(f'survoids/images/{img}').convert_alpha()
+        self.image = pygame.transform.scale(unscaled_image, size)
+        self.original_image = pygame.transform.scale(unscaled_image, size)
+        self.surf = pygame.Surface(size)
         self.rect = self.surf.get_rect()
         
-        self.SPEED = 2
+        self.SPEED = speed
+
         self.angle = rand.randint(0,360)
         self.radians = -math.radians(self.angle)
         self.spawn_radius = 500
         self.rect.centerx = 300 + round((self.spawn_radius + rand.randint(0,550)) * math.sin(self.radians))
         self.rect.centery = 300 + round((self.spawn_radius + rand.randint(0,550)) * math.cos(self.radians))
+
+    def get_angle(self) -> float:
+        return self.angle
 
     def get_pos(self) -> tuple:
         x = self.rect.centerx
@@ -494,6 +566,36 @@ class Enemy(pygame.sprite.Sprite):
         self.radians = -math.radians(self.angle)
         self.rect.centerx = self.rect.centerx + round(self.SPEED * math.sin(self.radians))
         self.rect.centery = self.rect.centery - round(self.SPEED * math.cos(self.radians))
+
+
+class EnemyA(Enemy):
+    value = 5
+    likelihood = 10
+
+    def __init__(self):
+        super().__init__(img="enemy_a.png", size=(26, 21), speed=2)
+
+
+class EnemyB(Enemy):
+    value = 10
+    likelihood = 0
+
+    def __init__(self):
+        super().__init__(img="enemy_b.png", size=(26, 21), speed=1)
+
+        self.BULLET_HOLDOFF = 60
+        self.bullet_delay = 0
+    
+    def update(self):
+        super().update()
+
+        if self.bullet_delay <= 0:
+            bullet = Bullet(self.get_angle(), self.get_pos(), "enemy_b_bullet.png", (4, 16), 4)
+            all_sprites.add(bullet)
+            enemy_bullet_sprites.add(bullet)
+            self.bullet_delay = self.BULLET_HOLDOFF
+        else:
+            self.bullet_delay -= 1
 
 
 class Hitmarker(pygame.sprite.Sprite):
@@ -566,12 +668,14 @@ class ScreenEffect(pygame.sprite.Sprite):
 ## Objects
 
 all_sprites = pygame.sprite.LayeredUpdates()
-bullet_sprites = pygame.sprite.Group()
+player_bullet_sprites = pygame.sprite.Group()
 enemy_sprites = pygame.sprite.Group()
+enemy_bullet_sprites = pygame.sprite.Group()
 hitmarker_sprites = pygame.sprite.Group()
 power_sprites = pygame.sprite.Group()
 ui_sprites = pygame.sprite.Group()
 text_sprites = pygame.sprite.Group()
+wave_clear_sprites = pygame.sprite.Group()
 powerup_text_sprites = pygame.sprite.Group()
 screen_effect_sprites = pygame.sprite.Group()
 
@@ -628,7 +732,7 @@ def main():
                 all_sprites.add(hitmarker)
                 hitmarker_sprites.add(hitmarker)
                 enemy_sprites.remove(event.enemy)
-                bullet_sprites.remove(event.bullet)
+                player_bullet_sprites.remove(event.bullet)
                 all_sprites.remove(event.enemy)
                 all_sprites.remove(event.bullet)
                 update_stats(player)
@@ -651,7 +755,7 @@ def main():
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_6:
-                    print(bullet_sprites)
+                    print(player_bullet_sprites)
                 if event.key == pygame.K_7:
                     pygame.event.post(pygame.event.Event(PLAYER_HIT))
                 if event.key == pygame.K_8:
@@ -683,10 +787,13 @@ def main():
             if pygame.sprite.spritecollideany(player, enemy_sprites, pygame.sprite.collide_rect_ratio(0.8)):
                 pygame.event.post(pygame.event.Event(PLAYER_HIT))
             
+            if pygame.sprite.spritecollideany(player, enemy_bullet_sprites, pygame.sprite.collide_rect_ratio(0.9)):
+                pygame.event.post(pygame.event.Event(PLAYER_HIT))
+            
         for enemy in enemy_sprites:
             point_object_to_object(enemy, player)
 
-            bullet_collision = pygame.sprite.spritecollideany(enemy, bullet_sprites)
+            bullet_collision = pygame.sprite.spritecollideany(enemy, player_bullet_sprites)
 
             if bullet_collision:
                 pygame.event.post(pygame.event.Event(ENEMY_HIT, {"enemy": enemy, "bullet": bullet_collision}))
