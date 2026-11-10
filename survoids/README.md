@@ -38,7 +38,7 @@ The purpose of **Survoids** to learn *Pygame-CE* and demonstrate my *Python* ski
 2. Follow the instructions *based on your operating system* to play.
 
 ### Source Code and Linux Users
- - Follow the **[General Setup instructions](https://github.com/prixdj/Games#getting-started)**, then **run**:
+ - Follow the **[General Setup instructions](https://github.com/prixdj/Games#general-setup)**, then **run**:
 ```bash
 python survoids/survoids.py
 ```
