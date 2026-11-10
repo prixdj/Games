@@ -434,3 +434,9 @@ __pycache__/
 survoids/*
 !survoids/survoids.py
 survoids.zip
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
