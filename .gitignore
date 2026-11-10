@@ -423,3 +423,9 @@ FodyWeavers.xsd
 # Krita
 *.~*
 *.kra
+
+# Pygame
+build/
+dist/
+*.spec
+__pycache__/
