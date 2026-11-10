@@ -1,0 +1,6 @@
+This is the text file where game data is saved.
+
+Score: 
+Wave: 
+Level: 
+Time Elapsed: 
