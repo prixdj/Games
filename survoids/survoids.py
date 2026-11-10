@@ -1059,8 +1059,10 @@ def display_player(player: Player, thruster: Thruster, all_sprites: pygame.sprit
 
 
 def display_user_interface(
-            x_ui: UserInterface,
+            player_x_ui: UserInterface,
             player_life_icon: UserInterface,
+            enemy_icon: UserInterface,
+            enemy_x_ui: UserInterface,
             lives_text: Text,
             score_text: Text,
             all_sprites: pygame.sprite.LayeredUpdates,
@@ -1070,17 +1072,23 @@ def display_user_interface(
     """Displays the user interface objects.
 
     Args:
-        x_ui (UserInterface): The X user interface object.
+        player_x_ui (UserInterface): The X user interface object next to the player life icon.
         player_life_icon (UserInterface): The player life icon object.
+        enemy_icon (UserInterface): The enemy icon object.
+        enemy_x_ui (UserInterface): The X user interface object next to the enemy number icon.
         lives_text (Text): The lives text object.
         score_text (Text): The score text object.
         all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
         user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
         text_sprites (pygame.sprite.Group): The text sprites object.
     """
-    add_sprite_to_groups(x_ui, all_sprites, user_interface_sprites)
+    add_sprite_to_groups(player_x_ui, all_sprites, user_interface_sprites)
 
     add_sprite_to_groups(player_life_icon, all_sprites, user_interface_sprites)
+
+    add_sprite_to_groups(enemy_icon, all_sprites, user_interface_sprites)
+
+    add_sprite_to_groups(enemy_x_ui, all_sprites, user_interface_sprites)
 
     add_sprite_to_groups(lives_text, all_sprites, text_sprites)
 
@@ -1346,9 +1354,13 @@ def main():
 
     thruster = Thruster()
 
-    x_ui = UserInterface("x.png", 17, 17, (52, 21))
+    player_x_ui = UserInterface("x.png", 17, 17, (52, 21))
 
     player_life_icon = UserInterface("life_ui.png", 33, 26, (21, 20))
+
+    enemy_x_ui = UserInterface("x.png", 17, 17, (300, 21))
+
+    enemy_num_icon = UserInterface("enemy_icon.png", 31, 27, (278, 57), True)
 
     lives_text = Text(str(player.lives), "kenvector_future", 24)
     lives_text.rect.topleft = (68, 8)
@@ -1382,7 +1394,7 @@ def main():
             if event.type == START_GAME:
                 remove_main_screen(main_screen_sprites, all_sprites, text_sprites, user_interface_sprites)
                 display_player(player, thruster, all_sprites)
-                display_user_interface(x_ui, player_life_icon, lives_text, score_text, all_sprites, user_interface_sprites, text_sprites)
+                display_user_interface(player_x_ui, player_life_icon, enemy_num_icon, enemy_x_ui, lives_text, score_text, all_sprites, user_interface_sprites, text_sprites)
                 game_state, previous_game_state = update_game_state(game_state, previous_game_state, "in_game")
 
             if event.type == IMMUNE_OFF:
