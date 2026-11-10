@@ -1,6 +1,10 @@
 # Games
 A collection of *Pygame* games that I made.
 
+## [Survoids](./survoids)
+A game similar to Vampire Survivors and Asteroids.
+
+
 ## Skills Demonstrated Across All Games
  - **Languages, Libraries & Tools**: Python, Pygame-CE, GitHub, Git, PyInstaller, Ruff
  - **Concepts & Practices**: Object-Oriented Programming, Dependency Injection, Data Persistence, Cross-Platform Distribution
