@@ -19,9 +19,14 @@
 # Private any methods only used by the class
 
 
-## Improvements
+## Potential Improvements
 
 # Boss enemy
+# Allow more controls
+# Make text more unique
+# Make exp drop and be collected / move towards the player
+# Use more @'s and _'s for functions to properly define them
+# Much more
 
 
 ## Imports
@@ -546,16 +551,20 @@ class Thruster(pygame.sprite.Sprite):
         self.angle = 90.0
         self.visibility = False
 
-    def update_visibility(self) -> None:
-        """Updates the thruster's visibility."""
+    def update_visibility(self, controls: dict[str, str]) -> None:
+        """Updates the thruster's visibility.
+
+        Args:
+            controls (dict[str, str]): Dictionary containing the controls.
+        """
         keyboard = pygame.key.get_pressed()
 
         # Visibility
         if (
-            keyboard[pygame.K_w]
-            or keyboard[pygame.K_s]
-            or keyboard[pygame.K_a]
-            or keyboard[pygame.K_d]
+            keyboard[pygame.key.key_code(controls["Up"])]
+            or keyboard[pygame.key.key_code(controls["Down"])]
+            or keyboard[pygame.key.key_code(controls["Left"])]
+            or keyboard[pygame.key.key_code(controls["Right"])]
         ):
             if not self.visibility:
                 self.visibility = True
@@ -796,6 +805,24 @@ class EnemyC(Enemy):
     def __init__(self):
         """Initialises the C type enemy with the enemy_c.png, a quarter of the size and a speed of 1.5."""
         super().__init__(img="enemy_c.png", size=(26, 21), speed=1.5, hp=3)
+
+
+class EnemyBoss(Enemy):
+    """The Boss type of the enemy class that is a boss.
+
+    Args:
+        value (int): The value of the Enemy class.
+        likelihood (int): The likelihood that the Enemy class appears.
+        buff_spawn_chance (int): The chance that the Enemy class spawns a buff on death out of 100.
+    """
+
+    value = 60
+    likelihood = 0
+    buff_spawn_chance = 100
+
+    def __init__(self):
+        """Initialises the Boss type enemy with the enemy_boss.png, full size and a speed of 0.5."""
+        super().__init__(img="enemy_boss.png", size=(26, 21), speed=0.5, hp=15)
 
 
 class Hitmarker(pygame.sprite.Sprite):
@@ -3357,7 +3384,7 @@ def main():
                 if player.immune:
                     player.check_immunity()
 
-                thruster.update_visibility()
+                thruster.update_visibility(controls)
 
                 for enemy in enemy_sprites:
                     enemy.move()
