@@ -1,12 +1,12 @@
 # Author: me
 # Date created: 15/02/2026
 # Date updated: 28/05/2026
+# Version: 0.1.2
 # Description: A game like asteroids and vampire survivors
 
 ## Improvements
 
-# powerups
-# more enemies
+# more enemy types
 
 
 ## Imports
@@ -36,9 +36,6 @@ pygame.mouse.set_visible(False)
 
 run_once = True
 
-bullet_delay = 0
-BULLET_HOLDOFF = 50
-
 enemy_number = 0
 
 score = 0
@@ -46,20 +43,13 @@ score = 0
 wave = 0
 wave_cleared = 0
 
-experience = 0
-
-leveled_up = False
-level = 1
-level_up_threshold = 40
-levels_gained = 0
-levels_used = 0
-
 
 ## Events
 
 GAME_OVER = pygame.event.custom_type()
 
 PLAYER_HIT = pygame.event.custom_type()
+
 IMMUNE_OFF = pygame.event.custom_type()
 
 ENEMY_HIT = pygame.event.custom_type()
@@ -112,17 +102,15 @@ def adjust_thruster(thruster, player):
 
 
 def fire_bullet(player):
-    global bullet_delay
-    global BULLET_HOLDOFF
     keyboard = pygame.key.get_pressed()
-    if bullet_delay <= 0:
+    if player.bullet_delay <= 0:
         if keyboard[K_SPACE]:
             bullet = Bullet(player.get_angle(), player.get_pos())
             all_sprites.add(bullet)
             bullet_sprites.add(bullet)
-            bullet_delay = BULLET_HOLDOFF 
+            player.bullet_delay = player.bullet_holdoff
     else:
-        bullet_delay -= 1
+        player.bullet_delay -= 1
 
 
 def spawn_enemies(enemy_number):
@@ -148,7 +136,7 @@ def spawn_waves():
         wave += 1
 
 
-def update_text(lives: int):
+def update_text(lives:int):
     life_number = str(lives)
     score_number = str(score)
     lives_text.update(life_number)
@@ -157,11 +145,11 @@ def update_text(lives: int):
     score_text.rect.topright = (596,8)
 
 
-def update_stats():
+def update_stats(player):
     global score
     global experience
     score += 20
-    experience += 4
+    player.experience += 4
 
 
 def update_run_once(boolean:bool):
@@ -169,11 +157,60 @@ def update_run_once(boolean:bool):
     run_once = boolean
 
 
-def check_game_over(lives: int):
+def check_game_over(lives:int):
     if lives <= 0:
         return True
     else:
         return False
+
+
+def display_powers():
+    if player.bullet_holdoff > 6:
+        lightning_power = Power((224, 483), "powerup1.png")
+        all_sprites.add(lightning_power)
+        power_sprites.add(lightning_power)
+    else:
+        lightning_power = Power((224, 483), "poweruplocked.png")
+    
+    lightning_text = Text("(1)", "kenvector_future_thin", 8)
+    lightning_text.rect.midtop = (224, 520)
+    all_sprites.add(lightning_text)
+    text_sprites.add(lightning_text)
+    powerup_text_sprites.add(lightning_text)
+    
+    if player.acceleration_speed < 0.8:
+        speed_power = Power((300, 483), "powerup2.png")
+        all_sprites.add(speed_power)
+        power_sprites.add(speed_power)
+    else:
+        speed_power = Power((300, 483), "poweruplocked.png")
+
+    speed_text = Text("(2)", "kenvector_future_thin", 8)
+    speed_text.rect.midtop = (300, 520)
+    all_sprites.add(speed_text)
+    text_sprites.add(speed_text)
+    powerup_text_sprites.add(speed_text)
+    
+    health_power = Power((376, 483), "powerup3.png")
+    all_sprites.add(health_power)
+    power_sprites.add(health_power)
+
+    health_text = Text("(3)", "kenvector_future_thin", 8)
+    health_text.rect.midtop = (376, 520)
+    all_sprites.add(health_text)
+    text_sprites.add(health_text)
+    powerup_text_sprites.add(health_text)
+
+
+def remove_powers():
+    for power in power_sprites:
+        all_sprites.remove(power)
+    power_sprites.empty()
+
+    for text in powerup_text_sprites:
+        all_sprites.remove(text)
+        text_sprites.remove(text)
+    powerup_text_sprites.empty()
 
 
 def reset_game_results():
@@ -214,8 +251,8 @@ class Background(pygame.sprite.Sprite):
 
 
 class Mouse(pygame.sprite.Sprite):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *groups):
+        super().__init__(*groups)
         self._layer = 8
         self.image = pygame.image.load('survoids/images/crosshair.png').convert_alpha()
         self.surf = pygame.Surface((30,33))
@@ -254,13 +291,21 @@ class Player(pygame.sprite.Sprite):
         self.MAX_ACCELERATION_LEFT = 5.0
         self.MAX_ACCELERATION_RIGHT = 5.0
 
-        self.ACCELERATION_SPEED = 0.2
-        self.DECELERATION_SPEED = 0.1
+        self.acceleration_speed = 0.2
+        self.deceleration_speed = 0.1
 
         self.lives = 3
         self.immune = False
 
-        self.BULLET_HOLDOFF = 20
+        self.experience = 0
+
+        self.level = 0
+        self.levels_used = 0
+        self.LEVEL_UP_THRESHOLD = 40
+        self.LEVEL_HOLDOFF = 10
+        self.level_delay = 0
+
+        self.bullet_holdoff = 50
         self.bullet_delay = 0
 
     def get_angle(self) -> float:
@@ -285,26 +330,26 @@ class Player(pygame.sprite.Sprite):
             # Accelerate
             if keyboard[K_w]:
                 if self.acceleration_up < self.MAX_ACCELERATION_UP:
-                    self.acceleration_up += self.ACCELERATION_SPEED
+                    self.acceleration_up += self.acceleration_speed
             if keyboard[K_s]:
                 if self.acceleration_down < self.MAX_ACCELERATION_DOWN:
-                    self.acceleration_down += self.ACCELERATION_SPEED
+                    self.acceleration_down += self.acceleration_speed
             if keyboard[K_a]:
                 if self.acceleration_left < self.MAX_ACCELERATION_LEFT:
-                    self.acceleration_left += self.ACCELERATION_SPEED
+                    self.acceleration_left += self.acceleration_speed
             if keyboard[K_d]:
                 if self.acceleration_right < self.MAX_ACCELERATION_RIGHT:
-                    self.acceleration_right += self.ACCELERATION_SPEED
+                    self.acceleration_right += self.acceleration_speed
         
         # Decelerate
         if self.acceleration_up > 0.0:
-            self.acceleration_up -= self.DECELERATION_SPEED
+            self.acceleration_up -= self.deceleration_speed
         if self.acceleration_down > 0.0:
-            self.acceleration_down -= self.DECELERATION_SPEED
+            self.acceleration_down -= self.deceleration_speed
         if self.acceleration_left > 0.0:
-            self.acceleration_left -= self.DECELERATION_SPEED
+            self.acceleration_left -= self.deceleration_speed
         if self.acceleration_right > 0.0:
-            self.acceleration_right -= self.DECELERATION_SPEED
+            self.acceleration_right -= self.deceleration_speed
         
         # Calculate movement
         acceleration_up_rounded = round(self.acceleration_up)
@@ -314,6 +359,40 @@ class Player(pygame.sprite.Sprite):
         
         self.rect.y = self.rect.y - acceleration_up_rounded + acceleration_down_rounded
         self.rect.x = self.rect.x - acceleration_left_rounded + acceleration_right_rounded
+
+        # Level up
+
+        if self.experience >= self.LEVEL_UP_THRESHOLD:
+            self.experience -= self.LEVEL_UP_THRESHOLD
+            self.level += 1
+
+        # Power up
+
+        if self.level > self.levels_used:
+            if self.level_delay <= 0:
+                if not power_sprites:
+                    display_powers()
+
+                used_level = False
+
+                if self.bullet_holdoff > 6 and keyboard[K_1]:
+                    self.bullet_holdoff -= 2
+                    used_level = True
+                elif self.acceleration_speed < 0.8 and keyboard[K_2]:
+                    self.acceleration_speed += 0.06
+                    self.deceleration_speed += 0.03
+                    used_level = True
+                elif keyboard[K_3]:
+                    self.lives += 1
+                    used_level = True
+                
+                if used_level:
+                    self.levels_used += 1
+                    self.level_delay = self.LEVEL_HOLDOFF
+                    remove_powers()
+            else:
+                self.level_delay -= 1
+
 
         # Keep player on-screen
         if self.rect.x > WIDTH - 45:
@@ -432,6 +511,19 @@ class Hitmarker(pygame.sprite.Sprite):
         self.time += 1
 
 
+class Power(pygame.sprite.Sprite):
+    def __init__(self, pos:tuple, image:str):
+        super().__init__()
+        self._layer = 6
+
+        self.image = pygame.image.load(f'survoids/images/{image}').convert_alpha()
+        self.surf = pygame.Surface((37,37))
+        self.rect = self.surf.get_rect(center = pos)
+
+    def update(self):
+        pass
+
+
 class UI(pygame.sprite.Sprite):
     def __init__(self, png:str, width:float, height:float, pos:tuple):
         super().__init__()
@@ -448,11 +540,14 @@ class Text(pygame.sprite.Sprite):
         super().__init__()
         self._layer = 6
 
+        self.words = initial
+
         self.font = pygame.font.Font(f'survoids/fonts/{font_name}.ttf', font_size)
         self.surf = self.font.render(initial, True, (255,255,255))
         self.rect = self.surf.get_rect()
 
     def update(self, new_text:str):
+        self.words = new_text
         self.surf = self.font.render(new_text, True, (255,255,255))
         self.rect = self.surf.get_rect()
 
@@ -474,8 +569,10 @@ all_sprites = pygame.sprite.LayeredUpdates()
 bullet_sprites = pygame.sprite.Group()
 enemy_sprites = pygame.sprite.Group()
 hitmarker_sprites = pygame.sprite.Group()
+power_sprites = pygame.sprite.Group()
 ui_sprites = pygame.sprite.Group()
 text_sprites = pygame.sprite.Group()
+powerup_text_sprites = pygame.sprite.Group()
 screen_effect_sprites = pygame.sprite.Group()
 
 background = Background()
@@ -534,7 +631,7 @@ def main():
                 bullet_sprites.remove(event.bullet)
                 all_sprites.remove(event.enemy)
                 all_sprites.remove(event.bullet)
-                update_stats()
+                update_stats(player)
 
             if event.type == PLAYER_HIT:
                 if not player.immune:
@@ -549,18 +646,22 @@ def main():
             if event.type == GAME_OVER:
                 player.set_can_move(False)
                 thruster.set_can_appear(False)
-                store_game_info(score, level, wave)
+                store_game_info(score, player.level, wave)
                 change_to_end_screen()
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_1:
+                if event.key == pygame.K_6:
                     print(bullet_sprites)
-                if event.key == pygame.K_2:
+                if event.key == pygame.K_7:
                     pygame.event.post(pygame.event.Event(PLAYER_HIT))
-                if event.key == pygame.K_3:
+                if event.key == pygame.K_8:
                     reset_game_results()
                 if event.key == pygame.K_4:
                     player.lives = 0
+                if event.key == pygame.K_5:
+                    player.experience += 10
+                if event.key == pygame.K_9:
+                    print(player.level)
         
         screen.fill((0,0,0))
 
@@ -595,8 +696,9 @@ def main():
                 hitmarker_sprites.remove(hitmarker)
                 all_sprites.remove(hitmarker)
 
+
         for entity in all_sprites:
-            if entity in text_sprites or entity in screen_effect_sprites:
+            if isinstance(entity, Text) or entity in screen_effect_sprites:
                 screen.blit(entity.surf, entity.rect)
             elif entity != thruster:
                 screen.blit(entity.image, entity.rect)
