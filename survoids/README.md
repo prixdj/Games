@@ -34,11 +34,11 @@ The purpose of **Survoids** to learn *Pygame-CE* and demonstrate my *Python* ski
 
 ## Running Survoids
 ### Windows and MacOS Release
-1. Navigate to the **releases** tab and find **Survoids - v1.0.0 Release**, or click **[here](../releases/tag/Survoids-v1.0.0)**.
+1. Navigate to the **releases** tab and find **Survoids - v1.0.0 Release**, or click **[here](https://github.com/prixdj/Games/releases/tag/Survoids-v1.0.0)**.
 2. Follow the instructions *based on your operating system* to play.
 
 ### Source Code and Linux Users
- - Follow the **[General Setup instructions](../README.md#general-setup)**, then **run**:
+ - Follow the **[General Setup instructions](https://github.com/prixdj/Games#getting-started)**, then **run**:
 ```bash
 python survoids/survoids.py
 ```
@@ -46,27 +46,35 @@ python survoids/survoids.py
 ## Gameplay Images
 ![Main Screen Preview](assets/prev_main_screen.png)
 *The main screen of Survoids.*
+<br><br>
 
 ![In Game Preview](assets/prev_in_game.png)
 *In game preview.*
+<br><br>
 
 ![Levels and Buffs Preview](assets/prev_levels_and_buffs.png)
 *Levelling up allows you to choose an upgrade, killing enemies may drop temporary buffs.*
+<br><br>
 
 ![Boss Preview](assets/prev_boss.png)
 *Fight a huge boss enemy.*
+<br><br>
 
 ![Pause Menu Preview](assets/prev_pausing.png)
 *Pause the game if you need to take a break.*
+<br><br>
 
 ![Retry Preview](assets/prev_retry.png)
 *If you die, click retry to try again.*
+<br><br>
 
 ![Previous Runs Screen Preview](assets/prev_previous_runs_screen.png)
 *See your previous runs.*
+<br><br>
 
 ![Controls Screen Preview](assets/prev_controls_screen.png)
 *See the controls of the game.*
+<br><br>
 
 ![Remapping Controls Preview](assets/prev_remapping_controls.png)
 *Remap the controls to how you want them.*
