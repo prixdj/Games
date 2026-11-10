@@ -8,7 +8,6 @@
 
 # Even more enemy types
 # Fix spawn radius
-# Enemy count
 # Controls screen
 # Previous runs thing
 
@@ -623,29 +622,41 @@ class Text(pygame.sprite.Sprite):
 
     Attributes:
         words (str): The words of the text object.
+        pos_type (str): The type of position the text object is positioned by.
+        pos (tuple[int, int]): The position of the text object.
         colour (tuple[int, int, int]): The RGB value of the colour of the text object.
         font (Font): The font of the text object.
         surf (surf): The surface of the text object.
         rect (rect): The rect of the text object.
     """
-    def __init__(self, initial: str, font_name: str, font_size: int, colour: tuple[int, int, int] = (255, 255, 255)):
+    def __init__(self, initial: str, font_name: str, font_size: int, pos_type:str, pos:tuple[int, int], colour: tuple[int, int, int] = (255, 255, 255)):
         """Initialises the text object.
 
         Args:
             initial (str): The initial words of the text object.
             font_name (str): The name of the text's font's file excluding .ttf.
             font_size (int): The size of the text's font.
+            pos_type (str): The type of position the text object is positioned by.
+            pos (tuple[int, int]): The position of the text object.
             colour (tuple[int, int, int], optional): The RGB value of the colour of the text object. Defaults to (255, 255, 255).
         """
         super().__init__()
         self._layer = 7
 
         self.words = initial
+        self.pos_type = pos_type
+        self.pos = pos
         self.colour = colour
 
         self.font = pygame.font.Font(f'survoids/fonts/{font_name}.ttf', font_size)
         self.surf = self.font.render(initial, True, self.colour)
         self.rect = self.surf.get_rect()
+
+        self.set_position()
+
+    def set_position(self):
+        """Sets the text object's position using its position type and position."""
+        setattr(self.rect, self.pos_type, self.pos)
 
     def change_colour(self, new_colour: tuple[int, int, int]):
         """Changes the colour of the text object to the new colour.
@@ -664,6 +675,7 @@ class Text(pygame.sprite.Sprite):
         self.words = new_words
         self.surf = self.font.render(new_words, True, self.colour)
         self.rect = self.surf.get_rect()
+        self.set_position()
 
 
 class ScreenEffect(pygame.sprite.Sprite):
@@ -823,8 +835,7 @@ def display_wave_clear(all_sprites: pygame.sprite.LayeredUpdates, text_sprites: 
         wave_clear_sprites (pygame.sprite.Group): The wave clear sprites group.
         wave (int): The wave number.
     """
-    wave_clear = Text(f"Wave {wave} Cleared", "kenvector_future_thin", 60)
-    wave_clear.rect.center = (300, 280)
+    wave_clear = Text(f"Wave {wave} Cleared", "kenvector_future_thin", 60, "center", (300, 280))
     add_sprite_to_groups(wave_clear, all_sprites, text_sprites, wave_clear_sprites)
 
 
@@ -838,6 +849,7 @@ def remove_wave_clear(wave_clear_sprites: pygame.sprite.Group, all_sprites: pyga
     """
     for text in wave_clear_sprites.sprites():
         remove_sprite_from_groups(text, all_sprites, text_sprites, wave_clear_sprites)
+        text.kill()
 
 
 def spawn_enemies(enemy_wave: list[type[Enemy]], all_sprites: pygame.sprite.LayeredUpdates, enemy_sprites: pygame.sprite.Group) -> None:
@@ -895,6 +907,9 @@ def spawn_waves(
             enemy_sprites: pygame.sprite.Group,
             text_sprites: pygame.sprite.Group,
             wave_clear_sprites: pygame.sprite.Group,
+            wave_info_sprites: pygame.sprite.Group,
+            wave_num_text: Text,
+            enemy_num_text: Text,
             wave: int,
             wave_value:int,
             wave_delay: int
@@ -906,6 +921,9 @@ def spawn_waves(
         enemy_sprites (pygame.sprite.Group): The enemy sprites group.
         text_sprites (pygame.sprite.Group): The text sprites group.
         wave_clear_sprites (pygame.sprite.Group): The wave clear sprites group.
+        wave_info_sprites (pygame.sprite.Group): The wave info sprites group.
+        wave_num_text (Text): The wave and wave number text object.
+        enemy_num_text (Text): The number of alive enemies in the current wave.
         wave (int): The wave number.
         wave_value (int): The value of the current wave.
         wave_delay (int): The delay before the next wave can spawn.
@@ -919,6 +937,9 @@ def spawn_waves(
             wave_delay = WAVE_HOLDOFF
 
         if wave_delay <= 0:
+            if any(sprite not in all_sprites for sprite in wave_info_sprites):
+                redisplay_wave_info(all_sprites, wave_info_sprites)
+
             enemy_wave = calc_wave(wave_value)
             spawn_enemies(enemy_wave, all_sprites, enemy_sprites)
 
@@ -926,7 +947,12 @@ def spawn_waves(
             change_enemy_likelihoods()
             wave_value += 10
             wave += 1
+            wave_num_text.update_words(f"Wave {wave}")
+            enemy_num_text.update_words(str(len(enemy_sprites)))
         else:
+            if wave_info_sprites:
+                hide_wave_info(wave_info_sprites, all_sprites)
+
             wave_delay -= 1
     return wave_value, wave, wave_delay
 
@@ -1061,12 +1087,15 @@ def display_player(player: Player, thruster: Thruster, all_sprites: pygame.sprit
 def display_user_interface(
             player_x_ui: UserInterface,
             player_life_icon: UserInterface,
+            wave_num_text: Text,
             enemy_icon: UserInterface,
             enemy_x_ui: UserInterface,
+            enemy_num_text: Text,
             lives_text: Text,
             score_text: Text,
             all_sprites: pygame.sprite.LayeredUpdates,
             user_interface_sprites: pygame.sprite.Group,
+            wave_info_sprites: pygame.sprite.Group,
             text_sprites: pygame.sprite.Group
 ) -> None:
     """Displays the user interface objects.
@@ -1074,40 +1103,57 @@ def display_user_interface(
     Args:
         player_x_ui (UserInterface): The X user interface object next to the player life icon.
         player_life_icon (UserInterface): The player life icon object.
+        wave_num_text (Text): The wave and wave number text object.
         enemy_icon (UserInterface): The enemy icon object.
         enemy_x_ui (UserInterface): The X user interface object next to the enemy number icon.
+        enemy_num_text (Text): The number of alive enemies in the current wave.
         lives_text (Text): The lives text object.
         score_text (Text): The score text object.
         all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
         user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
+        wave_info_sprites (pygame.sprite.Group): The wave info sprites group.
         text_sprites (pygame.sprite.Group): The text sprites object.
     """
     add_sprite_to_groups(player_x_ui, all_sprites, user_interface_sprites)
 
     add_sprite_to_groups(player_life_icon, all_sprites, user_interface_sprites)
 
-    add_sprite_to_groups(enemy_icon, all_sprites, user_interface_sprites)
+    add_sprite_to_groups(wave_num_text, all_sprites, text_sprites, wave_info_sprites)
 
-    add_sprite_to_groups(enemy_x_ui, all_sprites, user_interface_sprites)
+    add_sprite_to_groups(enemy_icon, all_sprites, user_interface_sprites, wave_info_sprites)
+
+    add_sprite_to_groups(enemy_x_ui, all_sprites, user_interface_sprites, wave_info_sprites)
+
+    add_sprite_to_groups(enemy_num_text, all_sprites, text_sprites, wave_info_sprites)
 
     add_sprite_to_groups(lives_text, all_sprites, text_sprites)
 
     add_sprite_to_groups(score_text, all_sprites, text_sprites)
 
 
-def update_text(lives:int, score: int, lives_text: Text, score_text: Text) -> None:
-    """Updates the lives text and score text objects.
+def hide_wave_info(wave_info_sprites: pygame.sprite.Group, all_sprites: pygame.sprite.LayeredUpdates) -> None:
+    """Hides the sprites in the wave info sprites group.
 
     Args:
-        lives (int): The number of lives of the player.
-        score (int): The score number.
-        lives_text (Text): The lives text object.
-        score_text (Text): The score text object.
+        wave_info_sprites (pygame.sprite.Group): The wave info sprites group.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
     """
-    lives_text.update_words(str(lives))
-    lives_text.rect.topleft = (68, 8)
-    score_text.update_words(str(score))
-    score_text.rect.topright = (596, 8)
+    for sprite in wave_info_sprites.sprites():
+        remove_sprite_from_groups(sprite, all_sprites)
+
+
+def redisplay_wave_info(
+            all_sprites: pygame.sprite.LayeredUpdates,
+            wave_info_sprites: pygame.sprite.Group
+) -> None:
+    """Redisplays the sprites previously in the wave info sprite group.
+
+    Args:
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        wave_info_sprites (pygame.sprite.Group): The wave info sprites group.
+    """
+    for sprite in wave_info_sprites:
+        add_sprite_to_groups(sprite, all_sprites)
 
 
 def update_stats(player: Player, score: int) -> int:
@@ -1190,8 +1236,7 @@ def display_powers(
     else:
         lightning_power = Power((224, 483), "poweruplocked.png")
 
-    lightning_text = Text("(1)", "kenvector_future_thin", 8)
-    lightning_text.rect.midtop = (224, 520)
+    lightning_text = Text("(1)", "kenvector_future_thin", 8, "midtop", (224, 520))
 
     add_sprite_to_groups(lightning_power, all_sprites, power_sprites)
     add_sprite_to_groups(lightning_text, all_sprites, text_sprites, power_up_text_sprites)
@@ -1201,16 +1246,14 @@ def display_powers(
     else:
         speed_power = Power((300, 483), "poweruplocked.png")
 
-    speed_text = Text("(2)", "kenvector_future_thin", 8)
-    speed_text.rect.midtop = (300, 520)
+    speed_text = Text("(2)", "kenvector_future_thin", 8, "midtop", (300, 520))
 
     add_sprite_to_groups(speed_power, all_sprites, power_sprites)
     add_sprite_to_groups(speed_text, all_sprites, text_sprites, power_up_text_sprites)
 
     health_power = Power((376, 483), "powerup3.png")
 
-    health_text = Text("(3)", "kenvector_future_thin", 8)
-    health_text.rect.midtop = (376, 520)
+    health_text = Text("(3)", "kenvector_future_thin", 8, "midtop", (376, 520))
 
     add_sprite_to_groups(health_power, all_sprites, power_sprites)
     add_sprite_to_groups(health_text, all_sprites, text_sprites, power_up_text_sprites)
@@ -1232,9 +1275,11 @@ def remove_powers(
     """
     for power in power_sprites.sprites():
         remove_sprite_from_groups(power, all_sprites, power_sprites)
+        power.kill()
 
     for text in power_up_text_sprites.sprites():
         remove_sprite_from_groups(text, all_sprites, text_sprites, power_up_text_sprites)
+        text.kill()
 
 
 def reset_game_results() -> None:
@@ -1318,6 +1363,7 @@ def main():
 
     power_sprites = pygame.sprite.Group()
     user_interface_sprites = pygame.sprite.Group()
+    wave_info_sprites = pygame.sprite.Group()
 
     text_sprites = pygame.sprite.Group()
 
@@ -1336,17 +1382,13 @@ def main():
 
     mouse = Mouse()
 
-    title_text = Text("Survoids", "kenvector_future", 80)
-    title_text.rect.midtop = (300, 40)
+    title_text = Text("Survoids", "kenvector_future", 80, "midtop", (300, 40))
 
-    play_text = Text("PLAY", "kenvector_future", 60)
-    play_text.rect.midtop = (300, 260)
+    play_text = Text("PLAY", "kenvector_future", 60, "midtop", (300, 260))
 
-    play_text_effect_1 = Text("PLAY", "kenvector_future", 60, (0, 0, 0))
-    play_text_effect_1.rect.midtop = (298, 258)
+    play_text_effect_1 = Text("PLAY", "kenvector_future", 60, "midtop", (298, 258), (0, 0, 0))
 
-    play_text_effect_2 = Text("PLAY", "kenvector_future", 60, (0, 0, 0))
-    play_text_effect_2.rect.midtop = (301, 261)
+    play_text_effect_2 = Text("PLAY", "kenvector_future", 60, "midtop", (301, 261), (0, 0, 0))
 
     play_button = UserInterface("button.png", 240, 78, (293, 295), True)
 
@@ -1358,25 +1400,25 @@ def main():
 
     player_life_icon = UserInterface("life_ui.png", 33, 26, (21, 20))
 
-    enemy_x_ui = UserInterface("x.png", 17, 17, (300, 21))
+    lives_text = Text(str(player.lives), "kenvector_future", 24, "topleft", (68, 8))
 
-    enemy_num_icon = UserInterface("enemy_icon.png", 31, 27, (278, 57), True)
+    score_text = Text(str(score), "kenvector_future_thin", 36, "topright", (596, 8))
 
-    lives_text = Text(str(player.lives), "kenvector_future", 24)
-    lives_text.rect.topleft = (68, 8)
+    wave_num_text = Text(f"Wave {wave}", "kenvector_future_thin", 30, "midtop", (300, 4))
 
-    score_text = Text(str(score), "kenvector_future_thin", 36)
-    score_text.rect.topright = (596, 8)
+    enemy_x_ui = UserInterface("x.png", 17, 17, (300, 57))
+
+    enemy_icon = UserInterface("enemy_icon.png", 31, 27, (272, 57), True)
+
+    enemy_num_text = Text(str(len(enemy_sprites)), "kenvector_future", 24, "midleft", (316, 57), (206, 37, 5))
 
     pause_screen = ScreenEffect((0, 0, 20), 60)
 
-    pause_text = Text("PAUSED", "kenvector_future", 120)
-    pause_text.rect.midtop = (300, 240)
+    pause_text = Text("PAUSED", "kenvector_future", 120, "midtop", (300, 240))
 
     end_screen = ScreenEffect((0, 0, 10), 60)
 
-    game_over_text = Text("GAME OVER", "kenvector_future", 75)
-    game_over_text.rect.center = (300, 200)
+    game_over_text = Text("GAME OVER", "kenvector_future", 75, "center", (300, 200))
 
 
     ## Running
@@ -1394,7 +1436,7 @@ def main():
             if event.type == START_GAME:
                 remove_main_screen(main_screen_sprites, all_sprites, text_sprites, user_interface_sprites)
                 display_player(player, thruster, all_sprites)
-                display_user_interface(player_x_ui, player_life_icon, enemy_num_icon, enemy_x_ui, lives_text, score_text, all_sprites, user_interface_sprites, text_sprites)
+                display_user_interface(player_x_ui, player_life_icon, wave_num_text, enemy_icon, enemy_x_ui, enemy_num_text, lives_text, score_text, all_sprites, user_interface_sprites, wave_info_sprites, text_sprites)
                 game_state, previous_game_state = update_game_state(game_state, previous_game_state, "in_game")
 
             if event.type == IMMUNE_OFF:
@@ -1411,12 +1453,13 @@ def main():
                 event.enemy.kill()
                 event.bullet.kill()
                 score = update_stats(player, score)
-                update_text(player.lives, score, lives_text, score_text)
+                score_text.update_words(str(score))
+                enemy_num_text.update_words(str(len(enemy_sprites)))
 
             if event.type == PLAYER_HIT:
                 if not player.immune:
                     player.lives -= 1
-                    update_text(player.lives, score, lives_text, score_text)
+                    score_text.update_words(str(player.lives))
 
                     if check_game_over(player.lives):
                         pygame.event.post(pygame.event.Event(GAME_OVER))
@@ -1502,7 +1545,7 @@ def main():
 
                 fire_bullet(player, all_sprites, player_bullet_sprites)
 
-                wave_value, wave, wave_delay = spawn_waves(all_sprites, enemy_sprites, text_sprites, wave_clear_sprites, wave, wave_value, wave_delay)
+                wave_value, wave, wave_delay = spawn_waves(all_sprites, enemy_sprites, text_sprites, wave_clear_sprites, wave_info_sprites, wave_num_text, enemy_num_text, wave, wave_value, wave_delay)
 
                 if pygame.sprite.spritecollideany(player, enemy_sprites, pygame.sprite.collide_rect_ratio(0.8)):
                     pygame.event.post(pygame.event.Event(PLAYER_HIT))
