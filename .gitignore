@@ -431,4 +431,6 @@ dist/
 __pycache__/
 
 # Survoids
-survoids/
+survoids/*
+!survoids/survoids.py
+survoids.zip
