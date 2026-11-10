@@ -62,7 +62,7 @@ python -m pip install -r requirements.txt
 How to run a specific game.
 
 #### Using the Game's Release
-1. Navigate to the **[releases](releases)** tab and **find the game's latest Release**.
+1. Navigate to the **[releases](https://github.com/prixdj/Games/releases)** tab and **find the game's latest Release**.
 2. Follow the instructions *based on your operating system* to play.
 *Note: Only Windows and MacOS are supported for game releases. Linux users must run from source code.*
 
