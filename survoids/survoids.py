@@ -1273,7 +1273,7 @@ def get_path(relative_path: str) -> str:
     """
     if hasattr(sys, "_MEIPASS"):
         return os.path.join(sys._MEIPASS, relative_path) # type: ignore
-    return os.path.join(os.path.abspath("."), relative_path)
+    return os.path.join(os.path.abspath(__file__), relative_path)
 
 
 def get_permanent_path(relative_path: str) -> str:
