@@ -34,7 +34,7 @@ WAVE_HOLDOFF = 120
 
 START_GAME = pygame.event.custom_type()
 
-PLAY_AGAIN = pygame.event.custom_type()
+RETRY = pygame.event.custom_type()
 
 GAME_OVER = pygame.event.custom_type()
 
@@ -256,6 +256,43 @@ class Player(pygame.sprite.Sprite):
         # Calculate movement
         self.x += self.acceleration_right - self.acceleration_left
         self.y += self.acceleration_down - self.acceleration_up
+
+    def reset(self) -> None:
+        """Resets all player stats."""
+
+        self.x = WIDTH / 2
+        self.y = HEIGHT / 2
+        self.angle = 90.0
+
+        self.acceleration_up = 0.0
+        self.acceleration_down = 0.0
+        self.acceleration_left = 0.0
+        self.acceleration_right = 0.0
+
+        self.MAX_ACCELERATION_UP = 5.0
+        self.MAX_ACCELERATION_DOWN = 5.0
+        self.MAX_ACCELERATION_LEFT = 5.0
+        self.MAX_ACCELERATION_RIGHT = 5.0
+
+        self.acceleration_speed = 0.2
+        self.deceleration_speed = 0.1
+
+        self.lives = 3
+        self.immune = False
+        self.immune_timer = 0
+        self.IMMUNE_TIMEOUT = FPS * 2
+
+        self.experience = 0
+
+        self.level = 1
+        self.levels_used = 1
+        self.LEVEL_UP_THRESHOLD = 40
+        self.LEVEL_HOLDOFF = 10
+        self.level_delay = 0
+
+        self.bullet_holdoff = 50
+        self.bullet_delay = 0
+
 
     def update(self):
         """Updates the player's level, powers and keeps the object on screen."""
@@ -1429,11 +1466,12 @@ def remove_powers(
 def display_end_screen(
             end_screen: ScreenEffect,
             game_over_text: Text,
-            play_again_button: UserInterface,
-            play_again_text_effect_1: Text,
-            play_again_text: Text,
-            play_again_text_effect_2: Text,
+            retry_button: UserInterface,
+            retry_text_effect_1: Text,
+            retry_text: Text,
+            retry_text_effect_2: Text,
             all_sprites: pygame.sprite.LayeredUpdates,
+            end_screen_sprites: pygame.sprite.Group,
             screen_effect_sprites: pygame.sprite.Group,
             text_sprites: pygame.sprite.Group,
             user_interface_sprites: pygame.sprite.Group
@@ -1443,26 +1481,52 @@ def display_end_screen(
     Args:
         end_screen (ScreenEffect): The end screen grey screen effect object.
         game_over_text (Text): The game over text object.
-        play_again_button (UserInterface): The play again button.
-        play_again_text_effect_1 (Text): The first text effect shadow on the play again text.
-        play_again_text (Text): The play again text.
-        play_again_text_effect_2 (Text): The second text effect shadow on the play again text.
+        retry_button (UserInterface): The retry button.
+        retry_text_effect_1 (Text): The first text effect shadow on the retry text.
+        retry_text (Text): The retry text.
+        retry_text_effect_2 (Text): The second text effect shadow on the retry text.
+        all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
+        end_screen_sprites (pygame.sprite.Group): The end screen sprites group.
+        screen_effect_sprites (pygame.sprite.Group): The screen effect sprites group.
+        text_sprites (pygame.sprite.Group): The text sprites group.
+        user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
+    """
+    add_sprite_to_groups(end_screen, all_sprites, end_screen_sprites, screen_effect_sprites)
+
+    add_sprite_to_groups(game_over_text, all_sprites, end_screen_sprites, text_sprites)
+
+    add_sprite_to_groups(retry_button, all_sprites, end_screen_sprites, user_interface_sprites)
+
+    add_sprite_to_groups(retry_text_effect_1, all_sprites, end_screen_sprites, text_sprites)
+
+    add_sprite_to_groups(retry_text, all_sprites, end_screen_sprites, text_sprites)
+
+    add_sprite_to_groups(retry_text_effect_2, all_sprites, end_screen_sprites, text_sprites)
+
+
+def remove_end_screen(
+        end_screen_sprites: pygame.sprite.Group,
+        all_sprites: pygame.sprite.LayeredUpdates,
+        screen_effect_sprites: pygame.sprite.Group,
+        text_sprites: pygame.sprite.Group,
+        user_interface_sprites: pygame.sprite.Group
+) -> None:
+    """Removes all end screen sprites.
+
+    Args:
+        end_screen_sprites (pygame.sprite.Group): The end screen sprites group.
         all_sprites (pygame.sprite.LayeredUpdates): The main sprites LayeredUpdates group.
         screen_effect_sprites (pygame.sprite.Group): The screen effect sprites group.
         text_sprites (pygame.sprite.Group): The text sprites group.
         user_interface_sprites (pygame.sprite.Group): The user interface sprites group.
     """
-    add_sprite_to_groups(end_screen, all_sprites, screen_effect_sprites)
-
-    add_sprite_to_groups(game_over_text, all_sprites, text_sprites)
-
-    add_sprite_to_groups(play_again_button, all_sprites, user_interface_sprites)
-
-    add_sprite_to_groups(play_again_text_effect_1, all_sprites, text_sprites)
-
-    add_sprite_to_groups(play_again_text, all_sprites, text_sprites)
-
-    add_sprite_to_groups(play_again_text_effect_2, all_sprites, text_sprites)
+    for sprite in end_screen_sprites.sprites():
+        if sprite in screen_effect_sprites:
+            remove_sprite_from_groups(sprite, all_sprites, screen_effect_sprites, end_screen_sprites)
+        if sprite in text_sprites:
+            remove_sprite_from_groups(sprite, all_sprites, text_sprites, end_screen_sprites)
+        if sprite in user_interface_sprites:
+            remove_sprite_from_groups(sprite, all_sprites, user_interface_sprites, end_screen_sprites)
 
 
 def reset_game_results() -> None:
@@ -1534,6 +1598,7 @@ def main():
 
     main_screen_sprites = pygame.sprite.Group()
     pause_screen_sprites = pygame.sprite.Group()
+    end_screen_sprites = pygame.sprite.Group()
 
     wave_clear_sprites = pygame.sprite.Group()
     power_up_text_sprites = pygame.sprite.Group()
@@ -1589,13 +1654,13 @@ def main():
 
     game_over_text = Text("GAME OVER", "kenvector_future", 75, "center", (300, 200))
 
-    play_again_button = UserInterface("button.png", 240, 78, (293, 395), True)
+    retry_button = UserInterface("button.png", 280, 84, (293, 395), True)
 
-    play_again_text = Text("PLAY", "kenvector_future", 60, "midtop", (300, 260))
+    retry_text = Text("RETRY", "kenvector_future", 60, "midtop", (300, 360))
 
-    play_again_text_effect_1 = Text("PLAY", "kenvector_future", 60, "midtop", (298, 258), (0, 0, 0))
+    retry_text_effect_1 = Text("RETRY", "kenvector_future", 60, "midtop", (298, 358), (0, 0, 0))
 
-    play_again_text_effect_2 = Text("PLAY", "kenvector_future", 60, "midtop", (301, 261), (0, 0, 0))
+    retry_text_effect_2 = Text("RETRY", "kenvector_future", 60, "midtop", (301, 361), (0, 0, 0))
 
 
 
@@ -1617,25 +1682,6 @@ def main():
                 display_user_interface(player_x_ui, player_life_icon, wave_num_text, wave_bar, enemy_icon, enemy_x_ui, enemy_num_text, lives_text, score_text, all_sprites, user_interface_sprites, wave_info_sprites, text_sprites, volume_meter_sprites)
                 game_state, previous_game_state = update_game_state(game_state, previous_game_state, "in_game")
                 start_game_time = pygame.time.get_ticks() / 1000
-
-            if event.type == PLAY_AGAIN:
-                score = 0
-
-                wave_value = 10
-                wave = 0
-                wave_delay = 0
-
-                time_elapsed = 0
-                paused_time = 0
-
-                player.x = 300.0
-                player.y = 300.0
-
-                enemy_sprites.empty()
-
-                score_text.update_words(str(score))
-                enemy_num_text.update_words(str(len(enemy_sprites)))
-                wave_num_text.update_words(str(wave))
 
             if event.type == IMMUNE_OFF:
                 player.image = player.IMMUNE_IMAGE
@@ -1682,13 +1728,41 @@ def main():
                 game_state, previous_game_state = update_game_state(game_state, previous_game_state, "game_over")
                 time_elapsed = pygame.time.get_ticks() / 1000 - start_game_time - paused_time
                 store_game_info(score, player.level, wave, time_elapsed)
-                display_end_screen(end_screen, game_over_text, play_again_button, play_again_text_effect_1, play_again_text, play_again_text_effect_2, all_sprites, screen_effect_sprites, text_sprites, user_interface_sprites)
+                display_end_screen(end_screen, game_over_text, retry_button, retry_text_effect_1, retry_text, retry_text_effect_2, all_sprites, end_screen_sprites, screen_effect_sprites, text_sprites, user_interface_sprites)
+
+            if event.type == RETRY:
+                game_state, previous_game_state = update_game_state(game_state, previous_game_state, "in_game")
+
+                score = 0
+
+                wave_value = 10
+                wave = 0
+                wave_delay = 0
+
+                time_elapsed = 0
+                paused_time = 0
+
+                player.x = 300.0
+                player.y = 300.0
+
+                paused_time = 0
+
+                enemy_sprites.empty()
+
+                remove_end_screen(end_screen_sprites, all_sprites, screen_effect_sprites, text_sprites, user_interface_sprites)
+
+                score_text.update_words(str(score))
+                enemy_num_text.update_words(str(len(enemy_sprites)))
+                wave_num_text.update_words(str(wave))
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     if game_state == "main_screen":
                         if check_mouse_click(play_button):
                             play_button.change_clicked(True)
+                    elif game_state == "game_over":
+                        if check_mouse_click(retry_button):
+                            retry_button.change_clicked(True)
 
             if event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:
@@ -1698,6 +1772,12 @@ def main():
                                 pygame.event.post(pygame.event.Event(START_GAME))
                         else:
                             play_button.change_clicked(False)
+                    if game_state == "game_over":
+                        if check_mouse_click(retry_button):
+                            if retry_button.clicked == True:
+                                pygame.event.post(pygame.event.Event(RETRY))
+                        else:
+                            retry_button.change_clicked(False)
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
