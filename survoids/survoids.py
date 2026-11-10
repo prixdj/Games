@@ -50,6 +50,12 @@ import sys
 
 import pygame
 
+## Path Correction
+
+if getattr(sys, "frozen", False):
+    os.chdir(os.path.dirname(sys.executable))
+
+
 ## Constants and Variables
 
 WIDTH = 600
