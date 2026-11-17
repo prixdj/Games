@@ -431,10 +431,18 @@ dist/
 __pycache__/
 
 # Survoids
-survoids/*
-!survoids/survoids.py
-!survoids/assets/
 survoids.zip
+survoids-mac/
+survoids*
+!survoids.py
+!assets/
+
+# App icon
+app_icon.icns
+
+# README
+README*
+!README.md
 
 # Virtual Environments
 .venv/
