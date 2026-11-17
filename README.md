@@ -8,7 +8,7 @@
 
 This game is adapted from a game I made using *Pygame Zero*.
 
-The purpose of **Survoids** to learn *Pygame-CE* and demonstrate my *Python* skills.
+The purpose of **Survoids** is to learn *Pygame-CE* and demonstrate my *Python* skills.
 
 ## Gameplay Features
 <a id="gameplay-gif"></a>
@@ -44,6 +44,7 @@ The purpose of **Survoids** to learn *Pygame-CE* and demonstrate my *Python* ski
 
 ## How to Play
 ### Requirements
+ - **[Git](https://git-scm.com/install/)**
  - **Python 3.10+**
  - **pip**
  - **Pygame-CE**
@@ -55,7 +56,7 @@ The purpose of **Survoids** to learn *Pygame-CE* and demonstrate my *Python* ski
 ### Source Code and Linux Users
 This will allow you to run **Survoids** from source, given you have **Python (3.10+)** and **pip**.
 
-**IMPORTANT: You do not need to do this if you will only download the Windows or MacOS release of a game.**
+**IMPORTANT: You do not need to do this if you will only download the Windows or macOS release of Survoids.**
 
 1. **Open a terminal or an app that accesses the terminal.**
 
@@ -70,7 +71,7 @@ git clone https://github.com/prixdj/Games.git
 ```bash
 cd Games
 ```
-***Note**: If you had put the path to where you wanted the cloned repository to be, you must change your directory to there first.*
+***Note**: If you had put the path to where you wanted the cloned repository to be, you must change your directory to there first. The following command is a template for steps **2** and **3** with `<path/to/your/folder>`.*
 ```bash
 git clone https://github.com/prixdj/Games.git <path/to/your/folder>
 cd <path/to/your/folder>/Games
@@ -82,7 +83,7 @@ cd <path/to/your/folder>/Games
 python -m venv .venv
 .venv\Scripts\activate
 ```
- - If you are on **MacOS** or **Linux**, **run**:
+ - If you are on **macOS** or **Linux**, **run**:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -193,6 +194,7 @@ This project is licensed under the **[MIT License](LICENSE)**.
 
 ## Development Environment
  - **Windows 10** and **macOS Tahoe 26+**
+ - **Git v2.39.5 (macOS) and 2.54.0 (Windows)**
  - **Miniconda Python v3.13.5**
  - **pip v25.1**
  - **Pygame Community Edition v2.5.8**
