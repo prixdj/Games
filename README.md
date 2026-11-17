@@ -81,11 +81,13 @@ cd <path/to/your/folder>/Games
  - If you are on **Windows**, **run**:
 ```bash
 python -m venv .venv
+&&
 .venv\Scripts\activate
 ```
  - If you are on **macOS** or **Linux**, **run**:
 ```bash
 python3 -m venv .venv
+&&
 source .venv/bin/activate
 ```
 
@@ -97,6 +99,7 @@ python -m pip install -r requirements.txt
 ```bash
 python survoids.py
 ```
+***Note for macOS users**: The first time you open Survoids, it may take 20-60 seconds to check for malware. Subsequent opens will take 2-3 seconds.*
 
 ## Gameplay Images
 <div align="center">
