@@ -1,44 +1,68 @@
 <div align="center">
-    <h1> Games </h1>
-    <blockquote>A collection of <em>Pygame</em> games that I made.</blockquote>
+    <h1> Survoids <img src="assets/app_icon.ico" width="32" height="32" align="absmiddle" alt="Survoids Icon"/></h1>
+    <blockquote> A <b>2D space-shooter roguelike</b> game inspired by <em>Asteroids</em> and <em>Vampire Survivors.</em></blockquote>
     <br>
 
 ![Made with Pygame-CE](https://img.shields.io/badge/Made_with-Pygame--CE-6AF02A?style=for-the-badge&logo=Python)
 </div>
 
-<div align="center">
-    <h2><a href="survoids">Survoids</a> <img src="assets/survoids.ico" width="28" height="28" align="absmiddle" alt="Survoids Icon"/></h2>
-    <blockquote>A <b>2D space shooter roguelike</b> game inspired by <em>Vampire Survivors</em> and <em>Asteroids</em>.</blockquote>
-</div>
+This game is adapted from a game I made using *Pygame Zero*.
 
-## Skills Demonstrated Across All Games
- - **Languages, Libraries & Tools**: Python, Pygame-CE, GitHub, Git, PyInstaller, Ruff, Krita
- - **Concepts & Practices**: Object-Oriented Programming, Dependency Injection, Data Persistence, Cross-Platform Distribution
+The purpose of **Survoids** to learn *Pygame-CE* and demonstrate my *Python* skills.
 
-## Getting Started
+## Gameplay Features
+<a id="gameplay-gif"></a>
+![Gameplay Demo](assets/survoids_gameplay.mov)
+<br>
+
+ - **[Fight](#in-game) endless waves of enemies of four types**
+ - **[Move](#gameplay-gif) with space-like physics**
+ - **[Level](#level-and-buff) up and choose an upgrade to your ship**
+ - **[Collect](#level-and-buff) buffs dropped by enemies for temporary power**
+ - **[Retry](#retry) to try and beat your previous runs**
+ - **[Pause](#pause) the game if you need to take a break**
+ - **[See](#previous-runs) all your previous runs**
+ - **[Remap](#remap-controls) your controls to your choice**
+
+## Skills Demonstrated in Survoids
+ - **Object-Oriented Programming**: Creating objects for sprites such as `Player`, `Enemy`, `Bullet` and `Text`.
+ - **Data Persistence**: Saving permanent controls and run data to `controls.txt` and `game_results.txt`.
+ - **Dependency Injection**: Passing data to and from functions and objects as they require it, having no global variables.
+ - **Event-Driven Programming**: Handling player input in the main event loop every frame to trigger custom game events.
+ - **State Management**: Tracking the game's state throughout execution using the `game_state` variable.
+
+## How to Play
 ### Requirements
  - **Python 3.10+**
  - **pip**
  - **Pygame-CE**
 
-### General Setup
-This will allow you to run any game from source, given you have **Python (3.10+)** and **pip**.
+### Windows and MacOS Release
+1. Navigate to the **releases** tab and find **Survoids - v1.0.0 Release**, or click **[here](https://github.com/prixdj/Games/releases/tag/Survoids-v1.0.0)**.
+2. Follow the instructions *based on your operating system* to play.
+
+### Source Code and Linux Users
+This will allow you to run **Survoids** from source, given you have **Python (3.10+)** and **pip**.
 
 **IMPORTANT: You do not need to do this if you will only download the Windows or MacOS release of a game.**
 
-1. **Open a terminal or an app that access the terminal.**
+1. **Open a terminal or an app that accesses the terminal.**
 
 2. **Clone the repository.**
- *Optional: Put the path of where you want the repository folder to be at the end of the command.*
-           *If you do not do this, it will create the folder in your current directory.*
+
+***Optional**: Put the path to where you want the cloned repository to be at the end of the command. If you do not do this, it will create the folder in your current directory.*
 ```bash
 git clone https://github.com/prixdj/Games.git
 ```
 
 3. **Navigate to the repository folder.**
- *Note: If you had put the path of where you wanted the repository folder to be, you must change your directory to there first.*
 ```bash
 cd Games
+```
+***Note**: If you had put the path to where you wanted the cloned repository to be, you must change your directory to there first.*
+```bash
+git clone https://github.com/prixdj/Games.git <path/to/your/folder>
+cd <path/to/your/folder>/Games
 ```
 
 4. **Create a python environment.**
@@ -57,35 +81,56 @@ source .venv/bin/activate
 ```bash
 python -m pip install -r requirements.txt
 ```
-
-### Specific Game Setup
-How to run a specific game.
-
-#### Using the Game's Release
-1. Navigate to the **[releases](https://github.com/prixdj/Games/releases)** tab and **find the game's latest Release**.
-2. Follow the instructions *based on your operating system* to play.
-*Note: Only Windows and MacOS are supported for game releases. Linux users must run from source code.*
-
-### Running from Source Code
-You must be in the **Games** directory in your *terminal* and in the *same environment* from **General Setup**.
-
-Then, run:
+6. **Run Survoids.**
 ```bash
-python game_name/game_name.py
+python survoids.py
 ```
-Replace *game_name* with the actual game name.
 
-**Note: For MacOS users, the game may take 20-30 seconds to load the first time as your operating system checks for malware.**
+## Gameplay Images
+##### The main screen of Survoids.
+![Main Screen Preview](assets/prev_main_screen.png)
+
+<a id="in-game"></a>
+##### In game preview.
+![In Game Preview](assets/prev_in_game.png)
+
+<a id="level-and-buff"></a>
+##### Levelling up allows you to choose an upgrade, killing enemies may drop temporary buffs.
+![Levels and Buffs Preview](assets/prev_levels_and_buffs.png)
+
+##### Fight a huge boss enemy.
+![Boss Preview](assets/prev_boss.png)
+
+<a id="pause"></a>
+##### Pause the game if you need to take a break.
+![Pause Menu Preview](assets/prev_pausing.png)
+
+<a id="retry"></a>
+##### If you die, click retry to try again.
+![Retry Preview](assets/prev_retry.png)
+
+<a id="previous-runs"></a>
+##### See your previous runs.
+![Previous Runs Screen Preview](assets/prev_previous_runs_screen.png)
+
+##### See the controls of the game.
+![Controls Screen Preview](assets/prev_controls_screen.png)
+
+<a id="remap-controls"></a>
+##### Remap the controls to how you want them.
+![Remapping Controls Preview](assets/prev_remapping_controls.png)
 
 ## Disclaimers
-### AI
- - **No AI** was used for any code generation or checking code unless otherwise specified.
- - AI was **only used for learning** about code.
-
-### Usage of Third Party Assets, Software or Libraries
- - **Pygame Community Edition**
- - **Space Shooter Remastered Asset Pack** from *Kenney Assets*
- - **PyInstaller**
+### Usage of Third Party Assets
+ - **[Space Shooter Remastered Asset Pack](https://kenney.nl/assets/space-shooter-remastered)** from *Kenney Assets*
 
 ### License
-This repository is licensed under the [MIT License](LICENSE).
+This project is licensed under the **[MIT License](LICENSE)**.
+
+## Development Environment
+ - **Windows 10** and **macOS Tahoe 26+**
+ - **Miniconda Python v3.13.5**
+ - **pip v25.1**
+ - **Pygame Community Edition v2.5.8**
+ - **PyInstaller v6.22.3**
+ - **Krita v5.2.3**
