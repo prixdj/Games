@@ -2,7 +2,7 @@
 
 # Author: prixdj
 # Date created: 15/02/2026
-# Date updated: 07/11/2026
+# Date updated: 17/11/2026
 # Version: 1.0.1
 # Description: A game like asteroids and vampire survivors
 
