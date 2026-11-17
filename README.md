@@ -80,14 +80,12 @@ cd <path/to/your/folder>/Games
 4. **Create a python environment.**
  - If you are on **Windows**, **run**:
 ```bash
-python -m venv .venv
-&&
+python -m venv .venv &&
 .venv\Scripts\activate
 ```
  - If you are on **macOS** or **Linux**, **run**:
 ```bash
-python3 -m venv .venv
-&&
+python3 -m venv .venv &&
 source .venv/bin/activate
 ```
 
