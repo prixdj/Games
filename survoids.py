@@ -3,7 +3,7 @@
 # Author: prixdj
 # Date created: 15/02/2026
 # Date updated: 07/11/2026
-# Version: 1.0.0
+# Version: 1.0.1
 # Description: A game like asteroids and vampire survivors
 
 ## Takeaways for Future Projects
@@ -3096,7 +3096,10 @@ def main():
                         power_sprites,
                         power_up_text_sprites,
                         buff_sprites,
+                        volume_meter_sprites,
                     )
+
+                    add_sprite_to_groups(wave_bar, all_sprites, volume_meter_sprites, wave_info_sprites)
 
                     enemy_num_text.update_words(str(len(enemy_sprites)))
 
