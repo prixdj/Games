@@ -435,7 +435,7 @@ survoids.zip
 survoids-mac/
 survoids*
 !survoids.py
-!assets/
+!assets/survoids_gameplay.mov
 
 # App icon
 app_icon.icns
