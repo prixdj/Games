@@ -12,7 +12,18 @@ The purpose of **Survoids** to learn *Pygame-CE* and demonstrate my *Python* ski
 
 ## Gameplay Features
 <a id="gameplay-gif"></a>
-![Gameplay Demo](assets/survoids_gameplay.mov)
+<div align="center">
+    <table>
+        <tr>
+            <td width="70%">
+                <video src="https://github.com/user-attachments/assets/1a16b955-0748-4dcc-b1c2-f9080245589d">
+                    mp4 demonstrating Survoids gameplay
+                </video>
+                <sub><em>Survoids Gameplay Demo</em></sub>
+            </td>
+        </tr>
+    </table>
+</div>
 <br>
 
  - **[Fight](#in-game) endless waves of enemies of four types**
@@ -24,7 +35,7 @@ The purpose of **Survoids** to learn *Pygame-CE* and demonstrate my *Python* ski
  - **[See](#previous-runs) all your previous runs**
  - **[Remap](#remap-controls) your controls to your choice**
 
-## Skills Demonstrated in Survoids
+## Skills Demonstrated
  - **Object-Oriented Programming**: Creating objects for sprites such as `Player`, `Enemy`, `Bullet` and `Text`.
  - **Data Persistence**: Saving permanent controls and run data to `controls.txt` and `game_results.txt`.
  - **Dependency Injection**: Passing data to and from functions and objects as they require it, having no global variables.
@@ -87,38 +98,91 @@ python survoids.py
 ```
 
 ## Gameplay Images
-##### The main screen of Survoids.
-![Main Screen Preview](assets/prev_main_screen.png)
+<div align="center">
+    <kbd>
+        <img src="assets/prev_main_screen.png" alt="Main Screen Preview" width="600"/>
+    </kbd>
+    <br>
+    <sub><em>The main screen of Survoids.</em></sub>
+</div>
+<br>
 
 <a id="in-game"></a>
-##### In game preview.
-![In Game Preview](assets/prev_in_game.png)
+<div align="center">
+    <kbd>
+        <img src="assets/prev_in_game.png" alt="In Game Preview" width="600"/>
+    </kbd>
+    <br>
+    <sub><em>In game preview.</em></sub>
+</div>
+<br>
 
 <a id="level-and-buff"></a>
-##### Levelling up allows you to choose an upgrade, killing enemies may drop temporary buffs.
-![Levels and Buffs Preview](assets/prev_levels_and_buffs.png)
+<div align="center">
+    <kbd>
+        <img src="assets/prev_levels_and_buffs.png" alt="Levels and Buffs Preview" width="600"/>
+    </kbd>
+    <br>
+    <sub><em>Levelling up allows you to choose an upgrade, killing enemies may drop temporary buffs.</em></sub>
+</div>
+<br>
 
-##### Fight a huge boss enemy.
-![Boss Preview](assets/prev_boss.png)
+<div align="center">
+    <kbd>
+        <img src="assets/prev_boss.png" alt="Boss Preview" width="600"/>
+    </kbd>
+    <br>
+    <sub><em>Fight a huge boss enemy.</em></sub>
+</div>
+<br>
 
 <a id="pause"></a>
-##### Pause the game if you need to take a break.
-![Pause Menu Preview](assets/prev_pausing.png)
+<div align="center">
+    <kbd>
+        <img src="assets/prev_pausing.png" alt="Pause Menu Preview" width="600"/>
+    </kbd>
+    <br>
+    <sub><em>Pause the game if you need to take a break.</em></sub>
+</div>
+<br>
 
 <a id="retry"></a>
-##### If you die, click retry to try again.
-![Retry Preview](assets/prev_retry.png)
+<div align="center">
+    <kbd>
+        <img src="assets/prev_retry.png" alt="Retry Preview" width="600"/>
+    </kbd>
+    <br>
+    <sub><em>If you die, click retry to try again.</em></sub>
+</div>
+<br>
 
 <a id="previous-runs"></a>
-##### See your previous runs.
-![Previous Runs Screen Preview](assets/prev_previous_runs_screen.png)
+<div align="center">
+    <kbd>
+        <img src="assets/prev_previous_runs_screen.png" alt="Previous Runs Screen Preview" width="600"/>
+    </kbd>
+    <br>
+    <sub><em>See your previous runs.</em></sub>
+</div>
+<br>
 
-##### See the controls of the game.
-![Controls Screen Preview](assets/prev_controls_screen.png)
+<div align="center">
+    <kbd>
+        <img src="assets/prev_controls_screen.png" alt="Controls Screen Preview" width="600"/>
+    </kbd>
+    <br>
+    <sub><em>See the controls of the game.</em></sub>
+</div>
+<br>
 
 <a id="remap-controls"></a>
-##### Remap the controls to how you want them.
-![Remapping Controls Preview](assets/prev_remapping_controls.png)
+<div align="center">
+    <kbd>
+        <img src="assets/prev_remapping_controls.png" alt="Remapping Controls Preview" width="600"/>
+    </kbd>
+    <br>
+    <sub><em>Remap the controls to how you want them.</em></sub>
+</div>
 
 ## Disclaimers
 ### Usage of Third Party Assets
